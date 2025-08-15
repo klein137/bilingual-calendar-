@@ -1,0 +1,1926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Bilingual Calendar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Prevent zoom and text selection */
+        * {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        input, textarea {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+
+        body {
+            overflow-x: hidden;
+            touch-action: pan-y;
+            /* Font settings applied via CSS variables */
+            font-family: var(--font-family, Arial, sans-serif);
+            font-size: var(--base-font-size, 16px);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Glassmorphism styles (removed) */
+        .glass {
+            background: var(--glass-bg-color, #ffffff); /* Use CSS variable */
+            border: 1px solid var(--glass-border-color, #e5e7eb); /* Use CSS variable */
+        }
+
+        .glass-dark {
+            background: var(--glass-dark-bg-color, #374151); /* Use CSS variable */
+            border: 1px solid var(--glass-dark-border-color, #4b5563); /* Use CSS variable */
+        }
+
+        /* Smooth transitions */
+        .view-transition {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Safe area handling */
+        .safe-area-top {
+            padding-top: env(safe-area-inset-top);
+        }
+
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* Hide scrollbar */
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* RTL support */
+        .rtl {
+            direction: rtl;
+        }
+
+        .rtl .sidebar {
+            left: auto;
+            right: 0;
+        }
+
+        /* Calendar grid - CRITICAL FIX - ENSURE EXACTLY 7 COLUMNS */
+        .calendar-grid {
+            display: grid !important;
+            grid-template-columns: repeat(7, 1fr) !important;
+            gap: 1px;
+            width: 100%;
+        }
+
+        /* Weekday headers - MUST be exactly 7 columns */
+        #weekdayHeaders {
+            display: grid !important;
+            grid-template-columns: repeat(7, 1fr) !important;
+            gap: 1px;
+            margin-bottom: 10px;
+        }
+
+        .weekday-header {
+            text-align: center;
+            /* Fixed font size to be relative to the base font size */
+            font-size: 0.875rem; /* 14px equivalent */
+            font-weight: 600;
+            color: var(--weekday-header-color);
+            padding: 12px 0;
+            background: var(--weekday-header-bg); /* Solid background */
+        }
+
+        /* Calendar days grid - MUST be exactly 7 columns, 6 rows */
+        #calendarDays {
+            display: grid !important;
+            grid-template-columns: repeat(7, 1fr) !important;
+            grid-template-rows: repeat(6, 1fr) !important;
+            gap: 1px;
+            background: var(--calendar-days-bg); /* Use CSS variable */
+            border: 1px solid var(--calendar-days-border); /* Use CSS variable */
+            min-height: 480px;
+        }
+
+        /* Event colors */
+        .event-work { background: #3b82f6; }
+        .event-personal { background: #10b981; }
+        .event-holiday { background: #f59e0b; }
+        .event-other { background: #8b5cf6; }
+        .event-national_holiday { background: #ef4444; }
+
+        /* Swipe gestures */
+        .swipeable {
+            touch-action: pan-x;
+        }
+
+        /* Active states */
+        .view-btn.active {
+            background: var(--view-btn-active-bg, #e5e7eb); /* Solid background */
+            color: var(--view-btn-active-color, #1f2937);
+        }
+
+        .nav-btn.active {
+            color: var(--nav-btn-active-color, white) !important;
+            background: var(--nav-btn-active-bg, #5a5a5a); /* Solid background */
+        }
+
+        .calendar-day {
+    background: var(--calendar-day-bg, white);
+    width: 40px;              /* Match height for perfect circle */
+    height: 40px;             /* Fixed height */
+    padding: 0;               /* Remove padding so circle stays even */
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;  /* Center day number vertically */
+    align-items: center;      /* Center day number horizontally */
+    position: relative;
+    border: none;
+    color: var(--calendar-day-color);
+    border-radius: 50%;       /* Makes it round */
+}
+        
+        .calendar-day.other-month {
+            opacity: 0.5;
+            color: var(--calendar-day-other-month-color);
+        }
+
+        .calendar-day .day-number {
+            position: relative;
+            z-index: 5;
+        }
+
+        .calendar-day:hover {
+            background: var(--calendar-day-hover-bg, #f3f4f6);
+        }
+
+        .calendar-day.today {
+            background: var(--calendar-day-today-bg, #ddd6fe); /* Solid background */
+            border: 2px solid var(--calendar-day-today-border, #9333ea);
+        }
+
+        .calendar-day.today .day-number {
+            color: var(--calendar-day-today-number-color, #6d28d9);
+        }
+
+        .calendar-day.selected {
+            background: var(--calendar-day-selected-bg, #c084fc); /* Solid background */
+        }
+
+        .event-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin: 1px;
+        }
+
+        .filter-item.active {
+            background: var(--filter-item-active-bg, #e5e7eb); /* Solid background */
+        }
+
+        /* Force grid layout - override any conflicting styles */
+        #weekdayHeaders.calendar-grid,
+        #calendarDays.calendar-grid {
+            display: grid !important;
+            grid-template-columns: repeat(7, 1fr) !important;
+        }
+
+        /* --- THEMES --- */
+        /* Light Theme (Default) */
+        body {
+            --glass-bg-color: #ffffff;
+            --glass-border-color: #e5e7eb;
+            --glass-dark-bg-color: #374151;
+            --glass-dark-border-color: #4b5563;
+            --calendar-days-bg: #fdfdfd;
+            --calendar-days-border: #e5e7eb;
+            --weekday-header-bg: #f3f4f6;
+            --weekday-header-color: #374151;
+            --calendar-day-bg: white;
+            --calendar-day-color: #1f2937;
+            --calendar-day-other-month-color: #9ca3af;
+            --calendar-day-hover-bg: #f3f4f6;
+            --calendar-day-today-bg: #ddd6fe;
+            --calendar-day-today-border: #9333ea;
+            --calendar-day-today-number-color: #6d28d9;
+            --calendar-day-selected-bg: #c084fc;
+            --view-btn-active-bg: #e5e7eb;
+            --view-btn-active-color: #1f2937;
+            --nav-btn-active-bg: #5a5a5a;
+            --nav-btn-active-color: white;
+            --filter-item-active-bg: #e5e7eb;
+            
+            background: #fdfdfd;
+            color: #1f2937;
+        }
+
+        /* Dark Theme */
+        body.dark {
+            --glass-bg-color: #2d3748;
+            --glass-border-color: #4a5568;
+            --glass-dark-bg-color: #1a202c;
+            --glass-dark-border-color: #2d3748;
+            --calendar-days-bg: #1e1e1e;
+            --calendar-days-border: #4a5568;
+            --weekday-header-bg: #2c2c2c;
+            --weekday-header-color: #a0a0a0;
+            --calendar-day-bg: #1e1e1e;
+            --calendar-day-color: #e0e0e0;
+            --calendar-day-other-month-color: #757575;
+            --calendar-day-hover-bg: #2c2c2c;
+            --calendar-day-today-bg: #4b0082;
+            --calendar-day-today-border: #9333ea;
+            --calendar-day-today-number-color: #fff;
+            --calendar-day-selected-bg: #5c18a2;
+            --view-btn-active-bg: #4a5568;
+            --view-btn-active-color: #e5e7eb;
+            --nav-btn-active-bg: #4a5568;
+            --nav-btn-active-color: #e5e7eb;
+            --filter-item-active-bg: #4a5568;
+
+            background: #1f2937;
+            color: #e5e7eb;
+        }
+
+        /* Sepia Theme */
+        body.sepia {
+            --glass-bg-color: #e6d7c4;
+            --glass-border-color: #d8c2a3;
+            --glass-dark-bg-color: #a39785;
+            --glass-dark-border-color: #928472;
+            --calendar-days-bg: #f4e8d8;
+            --calendar-days-border: #d8c2a3;
+            --weekday-header-bg: #e6d7c4;
+            --weekday-header-color: #574c3e;
+            --calendar-day-bg: #f4e8d8;
+            --calendar-day-color: #574c3e;
+            --calendar-day-other-month-color: #a39785;
+            --calendar-day-hover-bg: #d8c2a3;
+            --calendar-day-today-bg: #c1a892;
+            --calendar-day-today-border: #a3724c;
+            --calendar-day-today-number-color: #574c3e;
+            --calendar-day-selected-bg: #b99e82;
+            --view-btn-active-bg: #d8c2a3;
+            --view-btn-active-color: #574c3e;
+            --nav-btn-active-bg: #a39785;
+            --nav-btn-active-color: #f4e8d8;
+            --filter-item-active-bg: #d8c2a3;
+
+            background: #f4e8d8;
+            color: #574c3e;
+        }
+
+        /* NEW THEMES - Adjusted to be opaque */
+        body.blue-steel {
+            --glass-bg-color: #34495e;
+            --glass-border-color: #5d758c;
+            --glass-dark-bg-color: #1b2836;
+            --glass-dark-border-color: #34495e;
+            --calendar-days-bg: #2c3e50;
+            --calendar-days-border: #5d758c;
+            --weekday-header-bg: #34495e;
+            --weekday-header-color: #ecf0f1;
+            --calendar-day-bg: #2c3e50;
+            --calendar-day-color: #ecf0f1;
+            --calendar-day-other-month-color: #7f8c8d;
+            --calendar-day-hover-bg: #3b506b;
+            --calendar-day-today-bg: #4a6c8e;
+            --calendar-day-today-border: #6a829e;
+            --calendar-day-today-number-color: #fff;
+            --calendar-day-selected-bg: #4a6c8e;
+            --view-btn-active-bg: #3b506b;
+            --view-btn-active-color: #ecf0f1;
+            --nav-btn-active-bg: #1b2836;
+            --nav-btn-active-color: #ecf0f1;
+            --filter-item-active-bg: #3b506b;
+            
+            background: #2c3e50;
+            color: #ecf0f1;
+        }
+
+        body.ocean-breeze {
+            --glass-bg-color: #b2dfdb;
+            --glass-border-color: #80cbc4;
+            --glass-dark-bg-color: #00796b;
+            --glass-dark-border-color: #4db6ac;
+            --calendar-days-bg: #e0f2f1;
+            --calendar-days-border: #80cbc4;
+            --weekday-header-bg: #b2dfdb;
+            --weekday-header-color: #004d40;
+            --calendar-day-bg: #e0f2f1;
+            --calendar-day-color: #004d40;
+            --calendar-day-other-month-color: #4db6ac;
+            --calendar-day-hover-bg: #b2dfdb;
+            --calendar-day-today-bg: #4db6ac;
+            --calendar-day-today-border: #00897b;
+            --calendar-day-today-number-color: #fff;
+            --calendar-day-selected-bg: #4db6ac;
+            --view-btn-active-bg: #b2dfdb;
+            --view-btn-active-color: #004d40;
+            --nav-btn-active-bg: #00796b;
+            --nav-btn-active-color: #e0f2f1;
+            --filter-item-active-bg: #b2dfdb;
+
+            background: #e0f2f1;
+            color: #004d40;
+        }
+
+        body.forest-green {
+            --glass-bg-color: #4a665a;
+            --glass-border-color: #6c8a7b;
+            --glass-dark-bg-color: #20352b;
+            --glass-dark-border-color: #4a665a;
+            --calendar-days-bg: #2e463a;
+            --calendar-days-border: #6c8a7b;
+            --weekday-header-bg: #4a665a;
+            --weekday-header-color: #c9e0d1;
+            --calendar-day-bg: #2e463a;
+            --calendar-day-color: #c9e0d1;
+            --calendar-day-other-month-color: #6c8a7b;
+            --calendar-day-hover-bg: #4a665a;
+            --calendar-day-today-bg: #5e846b;
+            --calendar-day-today-border: #8cbb9c;
+            --calendar-day-today-number-color: #fff;
+            --calendar-day-selected-bg: #5e846b;
+            --view-btn-active-bg: #4a665a;
+            --view-btn-active-color: #c9e0d1;
+            --nav-btn-active-bg: #20352b;
+            --nav-btn-active-color: #c9e0d1;
+            --filter-item-active-bg: #4a665a;
+
+            background: #2e463a;
+            color: #c9e0d1;
+        }
+
+        body.high-contrast {
+            --glass-bg-color: #1a1a1a;
+            --glass-border-color: #333;
+            --glass-dark-bg-color: #000;
+            --glass-dark-border-color: #333;
+            --calendar-days-bg: #000;
+            --calendar-days-border: #333;
+            --weekday-header-bg: #1a1a1a;
+            --weekday-header-color: #fff;
+            --calendar-day-bg: #000;
+            --calendar-day-color: #fff;
+            --calendar-day-other-month-color: #aaa;
+            --calendar-day-hover-bg: #1a1a1a;
+            --calendar-day-today-bg: #333;
+            --calendar-day-today-border: #fff;
+            --calendar-day-today-number-color: #fff;
+            --calendar-day-selected-bg: #555;
+            --view-btn-active-bg: #333;
+            --view-btn-active-color: #fff;
+            --nav-btn-active-bg: #333;
+            --nav-btn-active-color: #fff;
+            --filter-item-active-bg: #333;
+
+            background: #000;
+            color: #fff;
+        }
+
+        body.grapevine {
+            --glass-bg-color: #553e5c;
+            --glass-border-color: #7a6382;
+            --glass-dark-bg-color: #2e1f33;
+            --glass-dark-border-color: #553e5c;
+            --calendar-days-bg: #3f2a46;
+            --calendar-days-border: #7a6382;
+            --weekday-header-bg: #553e5c;
+            --weekday-header-color: #e6e6e6;
+            --calendar-day-bg: #3f2a46;
+            --calendar-day-color: #e6e6e6;
+            --calendar-day-other-month-color: #a08da6;
+            --calendar-day-hover-bg: #553e5c;
+            --calendar-day-today-bg: #6a4c73;
+            --calendar-day-today-border: #a08da6;
+            --calendar-day-today-number-color: #fff;
+            --calendar-day-selected-bg: #6a4c73;
+            --view-btn-active-bg: #553e5c;
+            --view-btn-active-color: #e6e6e6;
+            --nav-btn-active-bg: #2e1f33;
+            --nav-btn-active-color: #e6e6e6;
+            --filter-item-active-bg: #553e5c;
+            
+            background: #3f2a46;
+            color: #e6e6e6;
+        }
+
+        /* General styles for better dark mode compatibility */
+        body.dark-mode {
+            background: #121212;
+            color: #e0e0e0;
+        }
+        body.dark-mode .weekday-header {
+            background: #2c2c2c; /* Solid background */
+            color: #a0a0a0;
+        }
+        body.dark-mode .calendar-day {
+            background: #1e1e1e;
+            color: #e0e0e0;
+        }
+        body.dark-mode .calendar-day.other-month {
+            color: #757575;
+        }
+        body.dark-mode .calendar-day:hover {
+            background: #2c2c2c;
+        }
+        body.dark-mode .calendar-day.today {
+            background: #4b0082; /* Solid background */
+            border-color: #9333ea;
+        }
+        body.dark-mode .calendar-day.today .day-number {
+            color: #fff;
+        }
+        
+        /* FIX: Change font sizes to use rem and apply them globally */
+        .text-xl { font-size: 1.25rem; }
+        .text-lg { font-size: 1.125rem; }
+        .text-base { font-size: 1rem; }
+        .text-sm { font-size: 0.875rem; }
+        .text-xs { font-size: 0.75rem; }
+
+        /* FIX: Ensure that the body's font styles are respected by all elements */
+        h1, h2, h3, h4, span, p, label, input, textarea, select, button {
+            font-family: inherit;
+            font-size: inherit;
+        }
+
+        /* Theme options in settings */
+        .theme-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .theme-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .theme-option.theme-light { background-color: #fff; border-color: #eee; }
+        .theme-option.theme-dark { background-color: #333; border-color: #555; }
+        .theme-option.theme-sepia { background-color: #f4e8d8; border-color: #d8c2a3; }
+        .theme-option.theme-blue-steel { background-color: #2c3e50; border-color: #556c82; }
+        .theme-option.theme-ocean-breeze { background-color: #e0f2f1; border-color: #b2dfdb; }
+        .theme-option.theme-forest-green { background-color: #2e463a; border-color: #597b69; }
+        .theme-option.theme-high-contrast { background-color: #000; border-color: #555; }
+        .theme-option.theme-grapevine { background-color: #3f2a46; border-color: #6a4c73; }
+        .theme-option.active { border-color: #9333ea; }
+
+        .font-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .font-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .font-slider {
+            width: 60%;
+        }
+        .event-dot-national {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ef4444; /* red color */
+            position: absolute;
+            top: 4px;
+            right: 4px;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100 min-h-screen">
+    <div id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 transform -translate-x-full transition-transform duration-300 ease-in-out">
+        <div class="glass h-full p-6 text-white">
+            <div class="flex items-center justify-between mb-8">
+                <h2 id="sidebarTitle" class="text-xl font-bold">Filters</h2>
+                <button id="closeSidebar" class="p-2 rounded-lg hover:bg-white/20">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <nav class="space-y-4">
+                <div class="filter-item active flex items-center p-3 rounded-lg hover:bg-white/20 cursor-pointer" data-filter="work">
+                    <div class="w-4 h-4 bg-blue-500 rounded-full mr-3"></div>
+                    <span id="filterWork">Work</span>
+                </div>
+                <div class="filter-item active flex items-center p-3 rounded-lg hover:bg-white/20 cursor-pointer" data-filter="personal">
+                    <div class="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
+                    <span id="filterPersonal">Personal</span>
+                </div>
+                <div class="filter-item active flex items-center p-3 rounded-lg hover:bg-white/20 cursor-pointer" data-filter="holiday">
+                    <div class="w-4 h-4 bg-yellow-500 rounded-full mr-3"></div>
+                    <span id="filterHoliday">Holidays</span>
+                </div>
+                <div class="filter-item active flex items-center p-3 rounded-lg hover:bg-white/20 cursor-pointer" data-filter="national_holiday">
+                    <div class="w-4 h-4 bg-red-500 rounded-full mr-3"></div>
+                    <span id="filterNationalHoliday">National Holidays</span>
+                </div>
+            </nav>
+        </div>
+    </div>
+
+    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+
+    <header class="fixed top-0 left-0 right-0 z-30 safe-area-top">
+        <div class="glass-dark backdrop-blur-xl px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <button id="menuButton" class="p-2 rounded-lg hover:bg-white/20 text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <h1 id="headerTitle" class="text-xl font-bold text-white">January 2025</h1>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="todayButton" class="px-3 py-1 bg-white/20 rounded-lg text-white text-sm hover:bg-white/20">
+                        Today
+                    </button>
+                    <select id="languageSelector" class="px-3 py-1 bg-white/20 rounded-lg text-white text-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी</option>
+                        <option value="kh">Khasi</option>
+                        <option value="kb">Karbi</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-20 pb-20 px-4">
+        <div class="mb-6">
+            <div class="glass rounded-2xl p-1 flex">
+                <button class="view-btn active flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all" data-view="month">Month</button>
+                <button class="view-btn flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all" data-view="week">Week</button>
+                <button class="view-btn flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all" data-view="day">Day</button>
+                <button class="view-btn flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all" data-view="agenda">Agenda</button>
+            </div>
+        </div>
+
+        <div id="calendarContainer" class="view-transition">
+            <div id="monthView" class="calendar-view">
+                <div class="glass rounded-2xl p-4 mb-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <button id="prevMonth" class="p-2 rounded-lg hover:bg-white/20">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+                        <h2 id="monthTitle" class="text-lg font-semibold">January 2025</h2>
+                        <button id="nextMonth" class="p-2 rounded-lg hover:bg-white/20">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="calendar-grid mb-2" id="weekdayHeaders">
+                    </div>
+                    
+                    <div class="calendar-grid glass" id="calendarDays">
+                    </div>
+                </div>
+            </div>
+
+            <div id="weekView" class="calendar-view hidden">
+                <div class="glass rounded-2xl p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <button id="prevWeek" class="p-2 rounded-lg hover:bg-white/20">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+                        <h2 id="weekTitle" class="text-lg font-semibold">Week of Jan 1, 2025</h2>
+                        <button id="nextWeek" class="p-2 rounded-lg hover:bg-white/20">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="weekGrid" class="space-y-2">
+                    </div>
+                </div>
+            </div>
+
+            <div id="dayView" class="calendar-view hidden">
+                <div class="glass rounded-2xl p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <button id="prevDay" class="p-2 rounded-lg hover:bg-white/20">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+                        <h2 id="dayTitle" class="text-lg font-semibold">Today</h2>
+                        <button id="nextDay" class="p-2 rounded-lg hover:bg-white/20">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="daySchedule" class="space-y-2">
+                    </div>
+                </div>
+            </div>
+
+            <div id="agendaView" class="calendar-view hidden">
+                <div class="glass rounded-2xl p-4">
+                    <h2 id="agendaTitle" class="text-lg font-semibold mb-4">Upcoming Events</h2>
+                    <div id="agendaEvents" class="space-y-3">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 z-30 safe-area-bottom">
+        <div class="glass-dark backdrop-blur-xl px-4 py-2">
+            <div class="flex items-center justify-around">
+                <button class="nav-btn active flex flex-col items-center py-2 px-3 rounded-lg text-white/70 hover:text-white hover:bg-white/20" data-tab="calendar">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span class="text-xs" id="navCalendar">Calendar</span>
+                </button>
+                <button class="nav-btn flex flex-col items-center py-2 px-3 rounded-lg text-white/70 hover:text-white hover:bg-white/20" data-tab="events">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    <span class="text-xs" id="navEvents">Events</span>
+                </button>
+                <button id="addEventBtn" class="flex flex-col items-center py-2 px-3 rounded-lg text-white bg-white-600 hover:bg-white-700">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    <span class="text-xs" id="navAdd">Add</span>
+                </button>
+                <button class="nav-btn flex flex-col items-center py-2 px-3 rounded-lg text-white/70 hover:text-white hover:bg-white/20" data-tab="settings">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span class="text-xs" id="navSettings">Settings</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div id="eventModal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4">
+        <div class="glass rounded-2xl w-full max-w-md p-6 mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="modalTitle" class="text-lg font-semibold">Add Event</h3>
+                <button id="closeModal" class="p-2 rounded-lg hover:bg-white/20">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <form id="eventForm" class="space-y-4">
+                <div>
+                    <label for="eventTitle" class="block text-sm font-medium mb-1" id="labelTitle">Title</label>
+                    <input type="text" id="eventTitle" class="w-full px-3 py-2 bg-white/50 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="eventDate" class="block text-sm font-medium mb-1" id="labelDate">Date</label>
+                        <input type="date" id="eventDate" class="w-full px-3 py-2 bg-white/50 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                    </div>
+                    <div>
+                        <label for="eventTime" class="block text-sm font-medium mb-1" id="labelTime">Time</label>
+                        <input type="time" id="eventTime" class="w-full px-3 py-2 bg-white/50 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="eventCategory" class="block text-sm font-medium mb-1" id="labelCategory">Category</label>
+                    <select id="eventCategory" class="w-full px-3 py-2 bg-white/50 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="work">Work</option>
+                        <option value="personal">Personal</option>
+                        <option value="holiday">Holiday</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="eventDescription" class="block text-sm font-medium mb-1" id="labelDescription">Description</label>
+                    <textarea id="eventDescription" rows="3" class="w-full px-3 py-2 bg-white/50 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                </div>
+                
+                <div class="flex space-x-3 pt-4">
+                    <button type="submit" class="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors" id="saveEventBtn">
+                        Save Event
+                    </button>
+                    <button type="button" id="deleteEventBtn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors hidden">
+                        Delete
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="eventsListModal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4">
+        <div class="glass rounded-2xl w-full max-w-lg p-6 mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="eventsListTitle" class="text-lg font-semibold">All Events</h3>
+                <button id="closeEventsListModal" class="p-2 rounded-lg hover:bg-white/20">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <input type="text" id="eventSearch" placeholder="Search events..." class="w-full px-3 py-2 bg-white/50 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+            </div>
+            
+            <div id="eventsListContent" class="space-y-3">
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="fixed inset-0 z-50 flex items-center justify-center hidden p-4">
+        <div class="glass rounded-2xl w-full max-w-md p-6 mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="settingsTitle" class="text-lg font-semibold">Settings</h3>
+                <button id="closeSettingsModal" class="p-2 rounded-lg hover:bg-white/20">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <span class="block text-sm font-medium mb-1">Theme</span>
+                    <div class="theme-options flex flex-wrap gap-2">
+                        <div class="theme-option theme-light active" data-theme="light"></div>
+                        <div class="theme-option theme-dark" data-theme="dark"></div>
+                        <div class="theme-option theme-sepia" data-theme="sepia"></div>
+                        <div class="theme-option theme-blue-steel" data-theme="blue-steel"></div>
+                        <div class="theme-option theme-ocean-breeze" data-theme="ocean-breeze"></div>
+                        <div class="theme-option theme-forest-green" data-theme="forest-green"></div>
+                        <div class="theme-option theme-high-contrast" data-theme="high-contrast"></div>
+                        <div class="theme-option theme-grapevine" data-theme="grapevine"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="block text-sm font-medium mb-1">Font Settings</span>
+                    <div class="font-controls">
+                        <div class="font-control">
+                            <span id="fontSizeLabel">Size</span>
+                            <input type="range" class="font-slider" id="fontSizeSlider" min="12" max="24" value="16">
+                        </div>
+                        <div class="font-control">
+                            <span id="fontFamilyLabel">Font</span>
+                            <select id="fontFamilySelect" class="px-3 py-1 bg-white/50 border border-white/30 rounded-lg">
+                                <option value="Arial, sans-serif">Arial</option>
+                                <option value="Georgia, serif">Georgia</option>
+                                <option value="Times New Roman, serif">Times New Roman</option>
+                                <option value="Helvetica, sans-serif">Helvetica</option>
+                                <option value="Roboto, sans-serif">Roboto</option>
+                                <option value="Open Sans, sans-serif">Open Sans</option>
+                                <option value="Lato, sans-serif">Lato</option>
+                                <option value="Merriweather, serif">Merriweather</option>
+                                <option value="Courier New, monospace">Courier New</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span id="settingsLanguage">Language</span>
+                    <select id="settingsLanguageSelector" class="px-3 py-1 bg-white/50 border border-white/30 rounded-lg">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी</option>
+                        <option value="kh">Khasi</option>
+                        <option value="kb">Karbi</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <span id="settingsWeekStart">Week starts on</span>
+                    <select id="weekStartSelect" class="px-3 py-1 bg-white/50 border border-white/30 rounded-lg">
+                        <option value="0">Sunday</option>
+                        <option value="1">Monday</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <span id="settingsTimeFormat">Time format</span>
+                    <select id="timeFormatSelect" class="w-full px-3 py-2 bg-white/50 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="12">12 hour</option>
+                        <option value="24">24 hour</option>
+                    </select>
+                </div>
+                
+                <hr class="border-white/20 my-4">
+
+                <button id="enableNotificationsBtn" class="w-full py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                    Enable Notifications
+                </button>
+
+                <button id="clearAllEvents" class="w-full py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                    Clear All Events
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentDate = new Date();
+        let currentView = 'month';
+        let selectedDate = null;
+        let events = JSON.parse(localStorage.getItem('calendarEvents')) || [];
+        let activeFilters = JSON.parse(localStorage.getItem('activeFilters')) || ['work', 'personal', 'holiday', 'national_holiday'];
+        let editingEventId = null;
+        let currentLanguage = localStorage.getItem('calendarLanguage') || 'en';
+        let weekStartsOn = parseInt(localStorage.getItem('weekStartsOn')) || 0; // 0 = Sunday, 1 = Monday
+        let timeFormat = parseInt(localStorage.getItem('timeFormat')) || 12; // 12 or 24
+        let currentTheme = localStorage.getItem('calendarTheme') || 'light';
+        let fontSize = parseInt(localStorage.getItem('fontSize')) || 16;
+        let fontFamily = localStorage.getItem('fontFamily') || 'Arial, sans-serif';
+
+        // Add a list of fixed national holidays
+        const nationalHolidays = [
+            { date: '2025-01-26', title: 'Republic Day', category: 'national_holiday' },
+            { date: '2025-08-15', title: 'Independence Day', category: 'national_holiday' },
+            { date: '2025-10-02', title: 'Mahatma Gandhi\'s Birthday', category: 'national_holiday' },
+            { date: '2025-12-25', title: 'Christmas', category: 'national_holiday' },
+        ];
+        
+        // Language translations
+        const translations = {
+            en: {
+                filters: 'Filters',
+                work: 'Work',
+                personal: 'Personal',
+                holidays: 'Holidays',
+                nationalHolidays: 'National Holidays',
+                today: 'Today',
+                month: 'Month',
+                week: 'Week',
+                day: 'Day',
+                agenda: 'Agenda',
+                calendar: 'Calendar',
+                events: 'Events',
+                add: 'Add',
+                settings: 'Settings',
+                addEvent: 'Add Event',
+                editEvent: 'Edit Event',
+                title: 'Title',
+                date: 'Date',
+                time: 'Time',
+                category: 'Category',
+                description: 'Description',
+                saveEvent: 'Save Event',
+                delete: 'Delete',
+                allEvents: 'All Events',
+                language: 'Language',
+                weekStartsOn: 'Week starts on',
+                timeFormat: 'Time format',
+                clearAllEvents: 'Clear All Events',
+                upcomingEvents: 'Upcoming Events',
+                noEvents: 'No events scheduled',
+                sunday: 'Sunday',
+                monday: 'Monday',
+                tuesday: 'Tuesday',
+                wednesday: 'Wednesday',
+                thursday: 'Thursday',
+                friday: 'Friday',
+                saturday: 'Saturday',
+                sun: 'Sun',
+                mon: 'Mon',
+                tue: 'Tue',
+                wed: 'Wed',
+                thu: 'Thu',
+                fri: 'Fri',
+                sat: 'Sat',
+                january: 'January',
+                february: 'February',
+                march: 'March',
+                april: 'April',
+                may: 'May',
+                june: 'June',
+                july: 'July',
+                august: 'August',
+                september: 'September',
+                october: 'October',
+                november: 'November',
+                december: 'December',
+                jan: 'Jan',
+                feb: 'Feb',
+                mar: 'Mar',
+                apr: 'Apr',
+                jun: 'Jun',
+                jul: 'Jul',
+                aug: 'Aug',
+                sep: 'Sep',
+                oct: 'Oct',
+                nov: 'Nov',
+                dec: 'Dec',
+                searchEvents: 'Search events...',
+                theme: 'Theme',
+                fontSize: 'Size',
+                fontFamily: 'Font',
+                enableNotifications: 'Enable Notifications',
+            },
+            hi: { // Hindi
+                filters: 'फ़िल्टर',
+                work: 'काम',
+                personal: 'व्यक्तिगत',
+                holidays: 'छुट्टियाँ',
+                nationalHolidays: 'राष्ट्रीय छुट्टियाँ',
+                today: 'आज',
+                month: 'महीना',
+                week: 'सप्ताह',
+                day: 'दिन',
+                agenda: 'कार्यसूची',
+                calendar: 'कैलेंडर',
+                events: 'कार्यक्रम',
+                add: 'जोड़ें',
+                settings: 'सेटिंग्स',
+                addEvent: 'कार्यक्रम जोड़ें',
+                editEvent: 'कार्यक्रम संपादित करें',
+                title: 'शीर्षक',
+                date: 'तिथि',
+                time: 'समय',
+                category: 'श्रेणी',
+                description: 'विवरण',
+                saveEvent: 'कार्यक्रम सहेजें',
+                delete: 'हटाएँ',
+                allEvents: 'सभी कार्यक्रम',
+                language: 'भाषा',
+                weekStartsOn: 'सप्ताह शुरू होता है',
+                timeFormat: 'समय स्वरूप',
+                clearAllEvents: 'सभी कार्यक्रम साफ़ करें',
+                upcomingEvents: 'आगामी कार्यक्रम',
+                noEvents: 'कोई कार्यक्रम निर्धारित नहीं है',
+                sunday: 'रविवार',
+                monday: 'सोमवार',
+                tuesday: 'मंगलवार',
+                wednesday: 'बुधवार',
+                thursday: 'गुरुवार',
+                friday: 'शुक्रवार',
+                saturday: 'शनिवार',
+                sun: 'रवि',
+                mon: 'सोम',
+                tue: 'मंगल',
+                wed: 'बुध',
+                thu: 'गुरु',
+                fri: 'शुक्र',
+                sat: 'शनि',
+                january: 'जनवरी',
+                february: 'फरवरी',
+                march: 'मार्च',
+                april: 'अप्रै',
+                may: 'मई',
+                june: 'जून',
+                july: 'जुलाई',
+                august: 'अगस्त',
+                september: 'सितंबर',
+                october: 'अक्टूबर',
+                november: 'नवंबर',
+                december: 'दिसंबर',
+                jan: 'जन',
+                feb: 'फर',
+                mar: 'मार्च',
+                apr: 'अप्रै',
+                jun: 'जून',
+                jul: 'जुला',
+                aug: 'अगस्त',
+                sep: 'सितं',
+                oct: 'अक्टू',
+                nov: 'नव',
+                dec: 'दिस',
+                searchEvents: 'कार्यक्रम खोजें...',
+                theme: 'थीम',
+                fontSize: 'आकार',
+                fontFamily: 'फ़ॉन्ट',
+                enableNotifications: 'अधिसूचनाएँ सक्षम करें',
+            },
+            kh: { // Khasi
+                filters: 'Filters',
+                work: 'Work',
+                personal: 'Personal',
+                holidays: 'Holidays',
+                nationalHolidays: 'National Holidays',
+                today: 'Today',
+                month: 'Month',
+                week: 'Week',
+                day: 'Day',
+                agenda: 'Agenda',
+                calendar: 'Calendar',
+                events: 'Events',
+                add: 'Add',
+                settings: 'Settings',
+                addEvent: 'Add Event',
+                editEvent: 'Edit Event',
+                title: 'Title',
+                date: 'Date',
+                time: 'Time',
+                category: 'Category',
+                description: 'Description',
+                saveEvent: 'Save Event',
+                delete: 'Delete',
+                allEvents: 'All Events',
+                language: 'Language',
+                weekStartsOn: 'Week starts on',
+                timeFormat: 'Time format',
+                clearAllEvents: 'Clear All Events',
+                upcomingEvents: 'Upcoming Events',
+                noEvents: 'No events scheduled',
+                sunday: 'Sngi u Blei',
+                monday: 'Sngi nyngkong',
+                tuesday: 'Sngi Ba-ar',
+                wednesday: 'Sngi Balang',
+                thursday: 'Sngi Palei',
+                friday: 'Sngi Thohdieng',
+                saturday: 'Sngi Saitjain',
+                sun: 'Blei',
+                mon: 'Nyng',
+                tue: 'Baar',
+                wed: 'Bal',
+                thu: 'Pal',
+                fri: 'Thoh',
+                sat: 'Sait',
+                january: 'Kyllalyngkot',
+                february: 'Rymphang',
+                march: 'Lber',
+                april: 'Iaiong',
+                may: 'Jymmang',
+                june: 'Jylliew',
+                july: 'Naitung',
+                august: 'Nailar',
+                september: 'Nailur',
+                october: 'Risaw',
+                november: 'Naiwieng',
+                december: 'Nohprah',
+                jan: 'Kyl',
+                feb: 'Rym',
+                mar: 'Lbe',
+                apr: 'Iao',
+                jun: 'Jyl',
+                jul: 'Nai',
+                aug: 'Nai',
+                sep: 'Nai',
+                oct: 'Ris',
+                nov: 'Nai',
+                dec: 'Noh',
+                searchEvents: 'searchEvents...',
+                theme: 'theme',
+                fontSize: 'fontSize',
+                fontFamily: 'fontFamily',
+                enableNotifications: 'enableNotifications',
+            },
+            kb: { // Karbi (approx.)
+                filters: 'Filters',
+                work: 'Work',
+                personal: 'Personal',
+                holidays: 'Holidays',
+                nationalHolidays: 'National Holidays',
+                today: 'Today',
+                month: 'Month',
+                week: 'Week',
+                day: 'Day',
+                agenda: 'Agenda',
+                calendar: 'Calendar',
+                events: 'Events',
+                add: 'Add',
+                settings: 'Settings',
+                addEvent: 'Add Event',
+                editEvent: 'Edit Event',
+                title: 'Title',
+                date: 'Date',
+                time: 'Time',
+                category: 'Category',
+                description: 'Description',
+                saveEvent: 'Save Event',
+                delete: 'Delete',
+                allEvents: 'All Events',
+                language: 'Language',
+                weekStartsOn: 'Week starts on',
+                timeFormat: 'Time format',
+                clearAllEvents: 'Clear All Events',
+                upcomingEvents: 'Upcoming Events',
+                noEvents: 'No events scheduled',
+                sunday: 'Sunday',
+                monday: 'Monday',
+                tuesday: 'Tuesday',
+                wednesday: 'Wednesday',
+                thursday: 'Thursday',
+                friday: 'Friday',
+                saturday: 'Saturday',
+                sun: 'Sun',
+                mon: 'Mon',
+                tue: 'Tue',
+                wed: 'Wed',
+                thu: 'Thu',
+                fri: 'Fri',
+                sat: 'Sat',
+                january: 'Klangcheng',
+                february: 'Kardi',
+                march: 'Thangthang',
+                april: 'Nengsam',
+                may: 'Nonghrek',
+                june: 'Thebong',
+                july: 'Kangjin',
+                august: 'Langchan',
+                september: 'Nirong',
+                october: 'Mirklan',
+                november: 'Mirim',
+                december: 'Nengkan',
+                jan: 'Jan',
+                feb: 'Feb',
+                mar: 'Mar',
+                apr: 'Apr',
+                may: 'May',
+                jun: 'Jun',
+                jul: 'Jul',
+                aug: 'Aug',
+                sep: 'Sep',
+                oct: 'Oct',
+                nov: 'Nov',
+                dec: 'Dec',
+                searchEvents: 'searchEvents...',
+                theme: 'Theme',
+                fontSize: 'Size',
+                fontFamily: 'Font',
+                enableNotifications: 'enableNotifications',
+            }
+        };
+
+        // Utility functions
+        function t(key) {
+            return translations[currentLanguage][key] || key;
+        }
+
+        function formatDate(date, format = 'long') {
+            if (!(date instanceof Date) || isNaN(date)) {
+                date = new Date(date);
+            }
+            const options = format === 'long' ? 
+                { year: 'numeric', month: 'long', day: 'numeric' } :
+                { month: 'short', day: 'numeric' };
+            return date.toLocaleDateString(currentLanguage === 'zh' ? 'zh-CN' : 'en-US', options);
+        }
+
+        function formatTime(time) {
+            if (!time) return '';
+            const [hours, minutes] = time.split(':');
+            const date = new Date();
+            date.setHours(parseInt(hours), parseInt(minutes));
+            
+            if (timeFormat === 12) {
+                return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            } else {
+                return time;
+            }
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function saveEvents() {
+            localStorage.setItem('calendarEvents', JSON.stringify(events));
+            scheduleAllNotifications();
+        }
+
+        function saveSettings() {
+            localStorage.setItem('calendarLanguage', currentLanguage);
+            localStorage.setItem('weekStartsOn', weekStartsOn.toString());
+            localStorage.setItem('timeFormat', timeFormat.toString());
+            localStorage.setItem('activeFilters', JSON.stringify(activeFilters));
+            localStorage.setItem('calendarTheme', currentTheme);
+            localStorage.setItem('fontSize', fontSize.toString());
+            localStorage.setItem('fontFamily', fontFamily);
+        }
+
+        // Date utilities
+        function getFirstDayOfMonth(date) {
+            return new Date(date.getFullYear(), date.getMonth(), 1);
+        }
+
+        function getLastDayOfMonth(date) {
+            return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        }
+
+        function getWeekStart(date) {
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 && weekStartsOn === 1 ? -6 : weekStartsOn);
+            const newDate = new Date(date);
+            newDate.setDate(diff);
+            return newDate;
+        }
+
+        function isSameDay(date1, date2) {
+            if (!date1 || !date2) return false;
+            return date1.getDate() === date2.getDate() &&
+                   date1.getMonth() === date2.getMonth() &&
+                   date1.getFullYear() === date2.getFullYear();
+        }
+
+        function isToday(date) {
+            return isSameDay(date, new Date());
+        }
+        
+        function formatToDateInput(date) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        // Notification functions
+        function enableNotifications() {
+            if (!("Notification" in window)) {
+                alert("This browser does not support desktop notification");
+            } else if (Notification.permission === "granted") {
+                alert("Notifications are already enabled.");
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        alert("Notifications enabled!");
+                        scheduleAllNotifications();
+                    }
+                });
+            } else {
+                alert("Please enable notifications in your browser settings.");
+            }
+        }
+
+        function scheduleAllNotifications() {
+            if (Notification.permission !== "granted") return;
+            // Clear existing alarms if any
+            // This is a simple implementation. In a real app, you'd use a more robust
+            // method like the Web Notifications API and Service Workers.
+            events.forEach(event => {
+                const eventDate = new Date(event.date + 'T' + (event.time || '09:00'));
+                const now = new Date();
+                const timeDiff = eventDate.getTime() - now.getTime();
+                if (timeDiff > 0 && timeDiff < 24 * 60 * 60 * 1000) { // Schedule for events within 24 hours
+                    setTimeout(() => {
+                        new Notification(t('upcomingEvents'), {
+                            body: `${t('title')}: ${event.title} - ${t('date')}: ${formatDate(eventDate)}`,
+                            icon: 'path/to/icon.png' // Add an icon
+                        });
+                    }, timeDiff);
+                }
+            });
+        }
+
+
+        // Event functions
+        function getEventsForDate(date) {
+            const dateStr = formatToDateInput(date);
+            const allEvents = [...events, ...nationalHolidays];
+            return allEvents.filter(event => 
+                event.date === dateStr && activeFilters.includes(event.category)
+            );
+        }
+
+        function addEvent(eventData) {
+            const event = {
+                id: generateId(),
+                ...eventData
+            };
+            events.push(event);
+            saveEvents();
+            renderCurrentView();
+        }
+
+        function updateEvent(id, eventData) {
+            const index = events.findIndex(e => e.id === id);
+            if (index !== -1) {
+                events[index] = { ...events[index], ...eventData };
+                saveEvents();
+                renderCurrentView();
+            }
+        }
+
+        function deleteEvent(id) {
+            events = events.filter(e => e.id !== id);
+            saveEvents();
+            renderCurrentView();
+        }
+        
+        // UI Customization functions
+        function setReaderTheme(theme) {
+            document.body.className = theme;
+            currentTheme = theme;
+            saveSettings();
+            document.querySelectorAll('.theme-option').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.theme-option.theme-${theme}`).classList.add('active');
+            
+            // Re-render to update any theme-dependent styles
+            renderCurrentView();
+        }
+
+        function setFontSize(size) {
+            document.documentElement.style.setProperty('--base-font-size', `${size}px`);
+            fontSize = size;
+            saveSettings();
+        }
+        
+        function setFontFamily(font) {
+            document.documentElement.style.setProperty('--font-family', font);
+            fontFamily = font;
+            saveSettings();
+        }
+
+        // UI Update functions
+        function updateLanguage() {
+            document.getElementById('sidebarTitle').textContent = t('filters');
+            document.getElementById('filterWork').textContent = t('work');
+            document.getElementById('filterPersonal').textContent = t('personal');
+            document.getElementById('filterHoliday').textContent = t('holidays');
+            document.getElementById('filterNationalHoliday').textContent = t('nationalHolidays');
+            document.getElementById('todayButton').textContent = t('today');
+            document.querySelector('[data-view="month"]').textContent = t('month');
+            document.querySelector('[data-view="week"]').textContent = t('week');
+            document.querySelector('[data-view="day"]').textContent = t('day');
+            document.querySelector('[data-view="agenda"]').textContent = t('agenda');
+            document.getElementById('navCalendar').textContent = t('calendar');
+            document.getElementById('navEvents').textContent = t('events');
+            document.getElementById('navAdd').textContent = t('add');
+            document.getElementById('navSettings').textContent = t('settings');
+            document.getElementById('labelTitle').textContent = t('title');
+            document.getElementById('labelDate').textContent = t('date');
+            document.getElementById('labelTime').textContent = t('time');
+            document.getElementById('labelCategory').textContent = t('category');
+            document.getElementById('labelDescription').textContent = t('description');
+            document.getElementById('saveEventBtn').textContent = t('saveEvent');
+            document.getElementById('deleteEventBtn').textContent = t('delete');
+            document.getElementById('eventsListTitle').textContent = t('allEvents');
+            document.getElementById('eventSearch').placeholder = t('searchEvents');
+            document.getElementById('settingsTitle').textContent = t('settings');
+            document.getElementById('settingsLanguage').textContent = t('language');
+            document.getElementById('settingsWeekStart').textContent = t('weekStartsOn');
+            document.getElementById('settingsTimeFormat').textContent = t('timeFormat');
+            document.getElementById('clearAllEvents').textContent = t('clearAllEvents');
+            document.getElementById('agendaTitle').textContent = t('upcomingEvents');
+            document.getElementById('fontSizeLabel').textContent = t('fontSize');
+            document.getElementById('fontFamilyLabel').textContent = t('fontFamily');
+            document.getElementById('enableNotificationsBtn').textContent = t('enableNotifications');
+
+            const categorySelect = document.getElementById('eventCategory');
+            categorySelect.innerHTML = `
+                <option value="work">${t('work')}</option>
+                <option value="personal">${t('personal')}</option>
+                <option value="holiday">${t('holidays')}</option>
+                <option value="other">Other</option>
+            `;
+            const weekStartSelect = document.getElementById('weekStartSelect');
+            weekStartSelect.innerHTML = `
+                <option value="0">${t('sunday')}</option>
+                <option value="1">${t('monday')}</option>
+            `;
+            weekStartSelect.value = weekStartsOn;
+            const timeFormatSelect = document.getElementById('timeFormatSelect');
+            timeFormatSelect.value = timeFormat;
+            document.getElementById('languageSelector').value = currentLanguage;
+            document.getElementById('settingsLanguageSelector').value = currentLanguage;
+        }
+
+        // Render functions
+        function renderMonthView() {
+            const monthTitle = document.getElementById('monthTitle');
+            const headerTitle = document.getElementById('headerTitle');
+            const weekdayHeaders = document.getElementById('weekdayHeaders');
+            const calendarDays = document.getElementById('calendarDays');
+
+            if (!monthTitle || !headerTitle || !weekdayHeaders || !calendarDays) {
+                console.error('Required DOM elements not found for calendar rendering.');
+                return;
+            }
+
+            const monthNames = [t('january'), t('february'), t('march'), t('april'), t('may'), t('june'), t('july'), t('august'), t('september'), t('october'), t('november'), t('december')];
+            const monthName = monthNames[currentDate.getMonth()];
+            const year = currentDate.getFullYear();
+            const title = `${monthName} ${year}`;
+            
+            monthTitle.textContent = title;
+            headerTitle.textContent = title;
+
+            const allWeekdays = [t('sun'), t('mon'), t('tue'), t('wed'), t('thu'), t('fri'), t('sat')];
+            let orderedWeekdays = [];
+
+            for (let i = 0; i < 7; i++) {
+                orderedWeekdays.push(allWeekdays[(weekStartsOn + i) % 7]);
+            }
+
+            weekdayHeaders.innerHTML = orderedWeekdays.map(day => {
+                return `<div class="weekday-header">${day}</div>`;
+            }).join('');
+
+            calendarDays.innerHTML = '';
+            const firstOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const firstDayOfWeek = firstOfMonth.getDay();
+            let startDayOffset = (firstDayOfWeek - weekStartsOn + 7) % 7;
+            const startDate = new Date(firstOfMonth);
+            startDate.setDate(firstOfMonth.getDate() - startDayOffset);
+
+            let dayElements = '';
+            for (let i = 0; i < 42; i++) {
+                const currentLoopDate = new Date(startDate);
+                currentLoopDate.setDate(startDate.getDate() + i);
+
+                const isCurrentMonth = currentLoopDate.getMonth() === currentDate.getMonth();
+                const today = new Date();
+                const isTodayFlag = isSameDay(currentLoopDate, today);
+                const isSelectedFlag = selectedDate && isSameDay(currentLoopDate, selectedDate);
+
+                let dayEvents = getEventsForDate(currentLoopDate);
+
+                let classList = 'calendar-day';
+                if (!isCurrentMonth) classList += ' other-month';
+                if (isTodayFlag) classList += ' today';
+                if (isSelectedFlag) classList += ' selected';
+                
+                // Fix for calendar day background to be theme-aware
+                const dayGlassClass = isCurrentMonth ? 'glass' : '';
+
+                const visibleEvents = dayEvents.slice(0, 3);
+                const eventDotsHTML = visibleEvents.map(event => {
+                    const category = event.category || 'default';
+                    return `<div class="event-dot event-${category}"></div>`;
+                }).join('');
+                
+                const hasMoreEvents = dayEvents.length > 3;
+                const moreEventsDotHTML = hasMoreEvents ? 
+                    '<div class="event-dot event-other"></div>' : '';
+
+                const dateString = formatToDateInput(currentLoopDate);
+                
+                dayElements += `
+                    <div class="${classList}" data-date="${dateString}" onclick="showDayViewForDate('${dateString}')">
+                        <span class="day-number">${currentLoopDate.getDate()}</span>
+                        <div class="event-dots flex flex-wrap">
+                            ${eventDotsHTML}
+                            ${moreEventsDotHTML}
+                        </div>
+                    </div>`;
+            }
+            
+            calendarDays.innerHTML = dayElements;
+        }
+
+        // Navigation functions
+        function previousMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCurrentView();
+        }
+
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCurrentView();
+        }
+
+        function goToToday() {
+            currentDate = new Date();
+            selectedDate = null;
+            renderCurrentView();
+        }
+
+        function selectDate(dateString) {
+            selectedDate = new Date(dateString);
+            renderCurrentView();
+        }
+        
+        function showDayViewForDate(dateString) {
+            currentDate = new Date(dateString);
+            handleViewChange('day');
+        }
+
+        function renderWeekView() {
+            const weekTitle = document.getElementById('weekTitle');
+            const weekGrid = document.getElementById('weekGrid');
+            
+            const weekStart = getWeekStart(new Date(currentDate));
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            
+            weekTitle.textContent = `Week of ${formatDate(weekStart, 'short')}`;
+            
+            const days = [];
+            const weekdays = [t('sunday'), t('monday'), t('tuesday'), t('wednesday'), t('thursday'), t('friday'), t('saturday')];
+            
+            for (let i = 0; i < 7; i++) {
+                const currentDateCopy = new Date(weekStart);
+                currentDateCopy.setDate(currentDateCopy.getDate() + i);
+                
+                const dayEvents = getEventsForDate(currentDateCopy);
+                const isCurrentDay = isToday(currentDateCopy);
+                
+                days.push(`
+                    <div class="glass rounded-lg p-3 ${isCurrentDay ? 'ring-2 ring-purple-500' : ''}">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium">${weekdays[currentDateCopy.getDay()]}</span>
+                            <span class="text-sm text-gray-600">${currentDateCopy.getDate()}</span>
+                        </div>
+                        <div class="space-y-1">
+                            ${dayEvents.map(event => `
+                                <div class="event-${event.category} text-white text-xs p-1 rounded cursor-pointer" 
+                                     onclick="editEvent('${event.id}')">
+                                    ${event.time ? formatTime(event.time) : ''} ${event.title}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `);
+            }
+            
+            weekGrid.innerHTML = days.join('');
+        }
+
+        function renderDayView() {
+            const dayTitle = document.getElementById('dayTitle');
+            const daySchedule = document.getElementById('daySchedule');
+            
+            const isCurrentDay = isToday(currentDate);
+            dayTitle.textContent = isCurrentDay ? t('today') : formatDate(currentDate);
+            
+            const dayEvents = getEventsForDate(currentDate);
+            dayEvents.sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
+            
+            if (dayEvents.length === 0) {
+                daySchedule.innerHTML = `<div class="text-center text-gray-500 py-8">${t('noEvents')}</div>`;
+            } else {
+                daySchedule.innerHTML = dayEvents.map(event => `
+                    <div class="glass rounded-lg p-4 cursor-pointer hover:bg-white/20" onclick="editEvent('${event.id}')">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <div class="w-3 h-3 rounded-full event-${event.category}"></div>
+                                    <h4 class="font-medium">${event.title}</h4>
+                                </div>
+                                ${event.time ? `<p class="text-sm text-gray-600 mb-1">${formatTime(event.time)}</p>` : ''}
+                                ${event.description ? `<p class="text-sm text-gray-700">${event.description}</p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderAgendaView() {
+            const agendaTitle = document.getElementById('agendaTitle');
+            const agendaEvents = document.getElementById('agendaEvents');
+            agendaTitle.textContent = t('upcomingEvents');
+            const today = new Date();
+            const todayStr = formatToDateInput(today);
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + 30);
+            const futureDateStr = formatToDateInput(futureDate);
+            
+            const allEvents = [...events, ...nationalHolidays];
+            const upcomingEvents = allEvents.filter(event => {
+                return event.date >= todayStr && event.date <= futureDateStr && activeFilters.includes(event.category);
+            }).sort((a, b) => {
+                const dateA = new Date(a.date + 'T' + (a.time || '00:00'));
+                const dateB = new Date(b.date + 'T' + (b.time || '00:00'));
+                return dateA - dateB;
+            });
+            
+            if (upcomingEvents.length === 0) {
+                agendaEvents.innerHTML = `<div class="text-center text-gray-500 py-8">${t('noEvents')}</div>`;
+            } else {
+                agendaEvents.innerHTML = upcomingEvents.map(event => {
+                    const eventDate = new Date(event.date + 'T00:00:00');
+                    return `
+                        <div class="glass rounded-lg p-4 cursor-pointer hover:bg-white/20" onclick="editEvent('${event.id}')">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <div class="w-3 h-3 rounded-full event-${event.category}"></div>
+                                        <h4 class="font-medium">${event.title}</h4>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mb-1">
+                                        ${formatDate(eventDate)} ${event.time ? formatTime(event.time) : ''}
+                                    </p>
+                                    ${event.description ? `<p class="text-sm text-gray-700">${event.description}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function renderCurrentView() {
+            document.querySelectorAll('.calendar-view').forEach(view => view.classList.add('hidden'));
+            document.getElementById(`${currentView}View`).classList.remove('hidden');
+            switch (currentView) {
+                case 'month': renderMonthView(); break;
+                case 'week': renderWeekView(); break;
+                case 'day': renderDayView(); break;
+                case 'agenda': renderAgendaView(); break;
+            }
+        }
+        
+        function renderEventsList(searchQuery = '') {
+            const eventsListContent = document.getElementById('eventsListContent');
+            const allEvents = [...events, ...nationalHolidays];
+            
+            const filteredEvents = allEvents.filter(event => {
+                const isFiltered = activeFilters.includes(event.category);
+                const isMatch = (event.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                 (event.description && event.description.toLowerCase().includes(searchQuery.toLowerCase())));
+                return isFiltered && isMatch;
+            }).sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            if (filteredEvents.length === 0) {
+                eventsListContent.innerHTML = `<div class="text-center text-gray-500 py-8">${t('noEvents')}</div>`;
+            } else {
+                eventsListContent.innerHTML = filteredEvents.map(event => {
+                    const eventDate = new Date(event.date + 'T00:00:00');
+                    return `
+                        <div class="glass rounded-lg p-4 cursor-pointer hover:bg-white/20" onclick="editEvent('${event.id}')">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <div class="w-3 h-3 rounded-full event-${event.category}"></div>
+                                        <h4 class="font-medium">${event.title}</h4>
+                                    </div>
+                                    <p class="text-sm text-gray-600 mb-1">${formatDate(eventDate)} ${event.time ? formatTime(event.time) : ''}</p>
+                                    ${event.description ? `<p class="text-sm text-gray-700">${event.description}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function showEventModal(date = null, eventId = null) {
+            const modal = document.getElementById('eventModal');
+            const form = document.getElementById('eventForm');
+            const deleteBtn = document.getElementById('deleteEventBtn');
+            editingEventId = eventId;
+            if (eventId) {
+                const event = events.find(e => e.id === eventId);
+                if (event) {
+                    document.getElementById('modalTitle').textContent = t('editEvent');
+                    document.getElementById('eventTitle').value = event.title;
+                    document.getElementById('eventDate').value = event.date;
+                    document.getElementById('eventTime').value = event.time || '';
+                    document.getElementById('eventCategory').value = event.category;
+                    document.getElementById('eventDescription').value = event.description || '';
+                    deleteBtn.classList.remove('hidden');
+                }
+            } else {
+                document.getElementById('modalTitle').textContent = t('addEvent');
+                form.reset();
+                if (date) {
+                    document.getElementById('eventDate').value = formatToDateInput(date);
+                }
+                deleteBtn.classList.add('hidden');
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function hideEventModal() { document.getElementById('eventModal').classList.add('hidden'); editingEventId = null; }
+        function showEventsListModal() { renderEventsList(); document.getElementById('eventsListModal').classList.remove('hidden'); }
+        function hideEventsListModal() { document.getElementById('eventsListModal').classList.add('hidden'); }
+        function showSettingsModal() { document.getElementById('settingsModal').classList.remove('hidden'); }
+        function hideSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
+        function editEvent(eventId) { 
+            const event = events.find(e => e.id === eventId);
+            if (event) {
+                showEventModal(null, eventId);
+            } else {
+                // If the event is a fixed holiday, just show a read-only message
+                alert('This is a fixed national holiday and cannot be edited.');
+            }
+        }
+
+        function handleEventFormSubmit(e) {
+            e.preventDefault();
+            const formData = {
+                title: document.getElementById('eventTitle').value,
+                date: document.getElementById('eventDate').value,
+                time: document.getElementById('eventTime').value,
+                category: document.getElementById('eventCategory').value,
+                description: document.getElementById('eventDescription').value
+            };
+            if (editingEventId) { updateEvent(editingEventId, formData); } else { addEvent(formData); }
+            hideEventModal();
+        }
+
+        function handleDeleteEvent() {
+            if (editingEventId && confirm('Are you sure you want to delete this event?')) {
+                deleteEvent(editingEventId);
+                hideEventModal();
+            }
+        }
+
+        function handleDateClick(e) {
+            const dateStr = e.target.closest('.calendar-day')?.dataset.date;
+            if (dateStr) {
+                const [year, month, day] = dateStr.split('-').map(Number);
+                selectedDate = new Date(year, month - 1, day);
+                renderCurrentView();
+                showEventModal(selectedDate);
+            }
+        }
+
+        function handleViewChange(view) {
+            currentView = view;
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-view="${view}"]`).classList.add('active');
+            renderCurrentView();
+        }
+
+        function handleNavigation(direction) {
+            if (currentView === 'month') currentDate.setMonth(currentDate.getMonth() + direction);
+            else if (currentView === 'week') currentDate.setDate(currentDate.getDate() + (direction * 7));
+            else if (currentView === 'day') currentDate.setDate(currentDate.getDate() + direction);
+            renderCurrentView();
+        }
+
+        function handleTodayClick() { currentDate = new Date(); selectedDate = null; renderCurrentView(); }
+        
+        function handleLanguageChange(event) {
+            currentLanguage = event.target.value;
+            saveSettings();
+            updateLanguage();
+            renderCurrentView();
+        }
+        
+        function handleFilterToggle(filter) {
+            const index = activeFilters.indexOf(filter);
+            if (index > -1) { activeFilters.splice(index, 1); } else { activeFilters.push(filter); }
+            saveSettings();
+            document.querySelectorAll('.filter-item').forEach(item => {
+                item.classList.toggle('active', activeFilters.includes(item.dataset.filter));
+            });
+            renderCurrentView();
+        }
+
+        function handleSidebarToggle() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            document.getElementById('overlay').classList.toggle('hidden');
+        }
+
+        function handleTabChange(tab) {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            if (tab === 'events') showEventsListModal();
+            else if (tab === 'settings') showSettingsModal();
+        }
+
+        function initializeEventListeners() {
+            document.getElementById('menuButton').addEventListener('click', handleSidebarToggle);
+            document.getElementById('closeSidebar').addEventListener('click', handleSidebarToggle);
+            document.getElementById('overlay').addEventListener('click', handleSidebarToggle);
+            document.getElementById('todayButton').addEventListener('click', handleTodayClick);
+            document.getElementById('languageSelector').addEventListener('change', handleLanguageChange);
+            document.querySelectorAll('.view-btn').forEach(btn => btn.addEventListener('click', () => handleViewChange(btn.dataset.view)));
+            document.getElementById('prevMonth').addEventListener('click', () => handleNavigation(-1));
+            document.getElementById('nextMonth').addEventListener('click', () => handleNavigation(1));
+            document.getElementById('prevWeek').addEventListener('click', () => handleNavigation(-1));
+            document.getElementById('nextWeek').addEventListener('click', () => handleNavigation(1));
+            document.getElementById('prevDay').addEventListener('click', () => handleNavigation(-1));
+            document.getElementById('nextDay').addEventListener('click', () => handleNavigation(1));
+            document.getElementById('calendarDays').addEventListener('click', handleDateClick);
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => handleTabChange(btn.dataset.tab)));
+            document.getElementById('addEventBtn').addEventListener('click', () => showEventModal());
+            document.getElementById('closeModal').addEventListener('click', hideEventModal);
+            document.getElementById('eventForm').addEventListener('submit', handleEventFormSubmit);
+            document.getElementById('deleteEventBtn').addEventListener('click', handleDeleteEvent);
+            document.getElementById('closeEventsListModal').addEventListener('click', hideEventsListModal);
+            document.getElementById('closeSettingsModal').addEventListener('click', hideSettingsModal);
+            document.getElementById('settingsLanguageSelector').addEventListener('change', handleLanguageChange);
+            document.getElementById('weekStartSelect').addEventListener('change', (e) => {
+                weekStartsOn = parseInt(e.target.value);
+                saveSettings(); renderCurrentView();
+            });
+            document.getElementById('timeFormatSelect').addEventListener('change', (e) => {
+                timeFormat = parseInt(e.target.value);
+                saveSettings(); renderCurrentView();
+            });
+            document.getElementById('clearAllEvents').addEventListener('click', () => {
+                if (confirm('Are you sure you want to clear all events? This cannot be undone.')) {
+                    events = [];
+                    saveEvents(); renderCurrentView(); hideSettingsModal();
+                }
+            });
+            document.querySelectorAll('.filter-item').forEach(item => item.addEventListener('click', () => handleFilterToggle(item.dataset.filter)));
+            document.getElementById('eventModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) hideEventModal(); });
+            document.getElementById('eventsListModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) hideEventsListModal(); });
+            document.getElementById('settingsModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) hideSettingsModal(); });
+
+            // New event listeners for Themes and Fonts
+            document.querySelectorAll('.theme-option').forEach(el => {
+                el.addEventListener('click', (e) => setReaderTheme(e.target.dataset.theme));
+            });
+
+            document.getElementById('fontSizeSlider').addEventListener('input', (e) => setFontSize(e.target.value));
+            document.getElementById('fontFamilySelect').addEventListener('change', (e) => setFontFamily(e.target.value));
+
+            // New event listener for event search
+            document.getElementById('eventSearch').addEventListener('input', (e) => renderEventsList(e.target.value));
+            
+            // New event listener for notifications
+            document.getElementById('enableNotificationsBtn').addEventListener('click', enableNotifications);
+        }
+
+        function initializeTouchSupport() {
+            let startX = 0, startY = 0;
+            const swipeableElement = document.getElementById('calendarContainer');
+            if (swipeableElement) {
+                swipeableElement.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; });
+                swipeableElement.addEventListener('touchend', (e) => {
+                    if (startX === 0) return;
+                    const diffX = startX - e.changedTouches[0].clientX;
+                    if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(startY - e.changedTouches[0].clientY)) {
+                        handleNavigation(diffX > 0 ? 1 : -1);
+                    }
+                    startX = 0;
+                });
+            }
+        }
+        
+        function addSampleEvents() {
+            if (events.length === 0) {
+                const today = new Date();
+                const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1);
+                const nextWeek = new Date(); nextWeek.setDate(today.getDate() + 7);
+                events.push(
+                    { id: generateId(), title: 'Team Meeting', date: formatToDateInput(today), time: '10:00', category: 'work', description: 'Weekly team standup meeting' },
+                    { id: generateId(), title: 'Lunch with Sarah', date: formatToDateInput(tomorrow), time: '12:30', category: 'personal', description: 'Catch up over lunch' },
+                    { id: generateId(), title: 'Project Deadline', date: formatToDateInput(nextWeek), time: '17:00', category: 'work', description: 'Final submission for Q1 project' }
+                );
+                saveEvents();
+            }
+        }
+        
+        function fixEventDates() {
+            let changesMade = false;
+            events = events.map(event => {
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(event.date)) {
+                    const dateObj = new Date(event.date);
+                    if (!isNaN(dateObj)) {
+                        event.date = formatToDateInput(dateObj);
+                        changesMade = true;
+                    }
+                }
+                return event;
+            });
+            if (changesMade) saveEvents();
+        }
+
+        function initialize() {
+            // Apply the initial theme first
+            setReaderTheme(currentTheme);
+
+            fixEventDates();
+            addSampleEvents();
+            updateLanguage();
+            initializeEventListeners();
+            initializeTouchSupport();
+            renderCurrentView();
+            
+            // Restore filter UI state based on saved settings
+            document.querySelectorAll('.filter-item').forEach(item => {
+                item.classList.toggle('active', activeFilters.includes(item.dataset.filter));
+            });
+            
+            // Restore theme and font settings
+            setFontSize(fontSize);
+            setFontFamily(fontFamily);
+            document.getElementById('fontSizeSlider').value = fontSize;
+            document.getElementById('fontFamilySelect').value = fontFamily;
+        }
+
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>
