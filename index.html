@@ -1908,6 +1908,7 @@
             }
         }
         
+        
         function addSampleEvents() {
             if (events.length === 0) {
                 const today = new Date();
@@ -1962,5 +1963,20 @@
 
         document.addEventListener('DOMContentLoaded', initialize);
     </script>
+    
+    <script>
+    // Register the Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(registration => {
+                    console.log('Service Worker registered successfully:', registration);
+                })
+                .catch(error => {
+                    console.log('Service Worker registration failed:', error);
+                });
+        });
+    }
+</script>
 </body>
 </html>
