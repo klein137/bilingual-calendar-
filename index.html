@@ -6,6 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Bilingual Calendar</title>
+    <link rel="manifest" href="/manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Prevent zoom and text selection */
@@ -35,13 +36,13 @@
 
         /* Glassmorphism styles (removed) */
         .glass {
-            background: var(--glass-bg-color, #ffffff); /* Use CSS variable */
-            border: 1px solid var(--glass-border-color, #e5e7eb); /* Use CSS variable */
+            background: var(--glass-bg-color, #ffffff);
+            border: 1px solid var(--glass-border-color, #e5e7eb);
         }
 
         .glass-dark {
-            background: var(--glass-dark-bg-color, #374151); /* Use CSS variable */
-            border: 1px solid var(--glass-dark-border-color, #4b5563); /* Use CSS variable */
+            background: var(--glass-dark-bg-color, #374151);
+            border: 1px solid var(--glass-dark-border-color, #4b5563);
         }
 
         /* Smooth transitions */
@@ -101,7 +102,7 @@
             font-weight: 600;
             color: var(--weekday-header-color);
             padding: 12px 0;
-            background: var(--weekday-header-bg); /* Solid background */
+            background: var(--weekday-header-bg);
         }
 
         /* Calendar days grid - MUST be exactly 7 columns, 6 rows */
@@ -110,8 +111,8 @@
             grid-template-columns: repeat(7, 1fr) !important;
             grid-template-rows: repeat(6, 1fr) !important;
             gap: 1px;
-            background: var(--calendar-days-bg); /* Use CSS variable */
-            border: 1px solid var(--calendar-days-border); /* Use CSS variable */
+            background: var(--calendar-days-bg);
+            border: 1px solid var(--calendar-days-border);
             min-height: 480px;
         }
 
@@ -129,30 +130,30 @@
 
         /* Active states */
         .view-btn.active {
-            background: var(--view-btn-active-bg, #e5e7eb); /* Solid background */
+            background: var(--view-btn-active-bg, #e5e7eb);
             color: var(--view-btn-active-color, #1f2937);
         }
 
         .nav-btn.active {
             color: var(--nav-btn-active-color, white) !important;
-            background: var(--nav-btn-active-bg, #5a5a5a); /* Solid background */
+            background: var(--nav-btn-active-bg, #5a5a5a);
         }
 
         .calendar-day {
     background: var(--calendar-day-bg, white);
-    width: 40px;              /* Match height for perfect circle */
-    height: 40px;             /* Fixed height */
-    padding: 0;               /* Remove padding so circle stays even */
+    width: 40px;
+    height: 40px;
+    padding: 0;
     cursor: pointer;
     transition: background-color 0.2s;
     display: flex;
     flex-direction: column;
-    justify-content: center;  /* Center day number vertically */
-    align-items: center;      /* Center day number horizontally */
+    justify-content: center;
+    align-items: center;
     position: relative;
     border: none;
     color: var(--calendar-day-color);
-    border-radius: 50%;       /* Makes it round */
+    border-radius: 50%;
 }
         
         .calendar-day.other-month {
@@ -170,7 +171,7 @@
         }
 
         .calendar-day.today {
-            background: var(--calendar-day-today-bg, #ddd6fe); /* Solid background */
+            background: var(--calendar-day-today-bg, #ddd6fe);
             border: 2px solid var(--calendar-day-today-border, #9333ea);
         }
 
@@ -179,7 +180,7 @@
         }
 
         .calendar-day.selected {
-            background: var(--calendar-day-selected-bg, #c084fc); /* Solid background */
+            background: var(--calendar-day-selected-bg, #c084fc);
         }
 
         .event-dot {
@@ -190,7 +191,7 @@
         }
 
         .filter-item.active {
-            background: var(--filter-item-active-bg, #e5e7eb); /* Solid background */
+            background: var(--filter-item-active-bg, #e5e7eb);
         }
 
         /* Force grid layout - override any conflicting styles */
@@ -427,7 +428,7 @@
             color: #e0e0e0;
         }
         body.dark-mode .weekday-header {
-            background: #2c2c2c; /* Solid background */
+            background: #2c2c2c;
             color: #a0a0a0;
         }
         body.dark-mode .calendar-day {
@@ -441,7 +442,7 @@
             background: #2c2c2c;
         }
         body.dark-mode .calendar-day.today {
-            background: #4b0082; /* Solid background */
+            background: #4b0082;
             border-color: #9333ea;
         }
         body.dark-mode .calendar-day.today .day-number {
@@ -1263,35 +1264,49 @@
         // Notification functions
         function enableNotifications() {
             if (!("Notification" in window)) {
-                alert("This browser does not support desktop notification");
-            } else if (Notification.permission === "granted") {
-                alert("Notifications are already enabled.");
-            } else if (Notification.permission !== "denied") {
-                Notification.requestPermission().then(permission => {
-                    if (permission === "granted") {
-                        alert("Notifications enabled!");
-                        scheduleAllNotifications();
-                    }
-                });
-            } else {
-                alert("Please enable notifications in your browser settings.");
+                alert("This browser does not support desktop notification.");
+                return;
+            }
+            if (Notification.permission === "denied") {
+                alert("You have previously denied notification permissions. Please enable them in your browser/device settings.");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    alert("Notifications enabled!");
+                    registerServiceWorker();
+                } else {
+                    alert("Notification permission was not granted.");
+                }
+            }).catch(error => {
+                console.error('Error requesting notification permission:', error);
+                alert("An error occurred while trying to enable notifications.");
+            });
+        }
+
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered successfully with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                    });
             }
         }
 
         function scheduleAllNotifications() {
             if (Notification.permission !== "granted") return;
-            // Clear existing alarms if any
-            // This is a simple implementation. In a real app, you'd use a more robust
-            // method like the Web Notifications API and Service Workers.
+            const now = new Date();
             events.forEach(event => {
                 const eventDate = new Date(event.date + 'T' + (event.time || '09:00'));
-                const now = new Date();
                 const timeDiff = eventDate.getTime() - now.getTime();
-                if (timeDiff > 0 && timeDiff < 24 * 60 * 60 * 1000) { // Schedule for events within 24 hours
+                if (timeDiff > 0 && timeDiff < 24 * 60 * 60 * 1000) {
                     setTimeout(() => {
                         new Notification(t('upcomingEvents'), {
                             body: `${t('title')}: ${event.title} - ${t('date')}: ${formatDate(eventDate)}`,
-                            icon: 'path/to/icon.png' // Add an icon
+                            icon: 'icon-192.png'
                         });
                     }, timeDiff);
                 }
@@ -1466,7 +1481,6 @@
                 if (isTodayFlag) classList += ' today';
                 if (isSelectedFlag) classList += ' selected';
                 
-                // Fix for calendar day background to be theme-aware
                 const dayGlassClass = isCurrentMonth ? 'glass' : '';
 
                 const visibleEvents = dayEvents.slice(0, 3);
@@ -1696,6 +1710,24 @@
                     document.getElementById('eventCategory').value = event.category;
                     document.getElementById('eventDescription').value = event.description || '';
                     deleteBtn.classList.remove('hidden');
+                } else {
+                    // It's a national holiday, so make the form read-only
+                    document.getElementById('modalTitle').textContent = 'National Holiday';
+                    const holiday = nationalHolidays.find(h => h.id === eventId);
+                    if (holiday) {
+                        document.getElementById('eventTitle').value = holiday.title;
+                        document.getElementById('eventDate').value = holiday.date;
+                        document.getElementById('eventCategory').value = 'national_holiday';
+                        document.getElementById('eventDescription').value = '';
+                        document.getElementById('eventTime').value = '';
+                        document.getElementById('eventTitle').readOnly = true;
+                        document.getElementById('eventDate').readOnly = true;
+                        document.getElementById('eventTime').readOnly = true;
+                        document.getElementById('eventCategory').disabled = true;
+                        document.getElementById('eventDescription').readOnly = true;
+                        document.getElementById('saveEventBtn').classList.add('hidden');
+                        deleteBtn.classList.add('hidden');
+                    }
                 }
             } else {
                 document.getElementById('modalTitle').textContent = t('addEvent');
@@ -1703,6 +1735,12 @@
                 if (date) {
                     document.getElementById('eventDate').value = formatToDateInput(date);
                 }
+                document.getElementById('eventTitle').readOnly = false;
+                document.getElementById('eventDate').readOnly = false;
+                document.getElementById('eventTime').readOnly = false;
+                document.getElementById('eventCategory').disabled = false;
+                document.getElementById('eventDescription').readOnly = false;
+                document.getElementById('saveEventBtn').classList.remove('hidden');
                 deleteBtn.classList.add('hidden');
             }
             modal.classList.remove('hidden');
@@ -1715,11 +1753,11 @@
         function hideSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
         function editEvent(eventId) { 
             const event = events.find(e => e.id === eventId);
+            const holiday = nationalHolidays.find(h => h.id === eventId);
             if (event) {
                 showEventModal(null, eventId);
-            } else {
-                // If the event is a fixed holiday, just show a read-only message
-                alert('This is a fixed national holiday and cannot be edited.');
+            } else if (holiday) {
+                alert('This is a fixed national holiday and cannot be edited or deleted.');
             }
         }
 
