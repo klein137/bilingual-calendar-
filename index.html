@@ -34,15 +34,19 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        /* Glassmorphism styles (removed) */
+        /* Glassmorphism styles */
         .glass {
             background: var(--glass-bg-color, #ffffff);
             border: 1px solid var(--glass-border-color, #e5e7eb);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
 
         .glass-dark {
             background: var(--glass-dark-bg-color, #374151);
             border: 1px solid var(--glass-dark-border-color, #4b5563);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
 
         /* Smooth transitions */
@@ -140,21 +144,21 @@
         }
 
         .calendar-day {
-    background: var(--calendar-day-bg, white);
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    border: none;
-    color: var(--calendar-day-color);
-    border-radius: 50%;
-}
+            background: var(--calendar-day-bg, white);
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            border: none;
+            color: var(--calendar-day-color);
+            border-radius: 50%;
+        }
         
         .calendar-day.other-month {
             opacity: 0.5;
@@ -173,6 +177,7 @@
         .calendar-day.today {
             background: var(--calendar-day-today-bg, #ddd6fe);
             border: 2px solid var(--calendar-day-today-border, #9333ea);
+            transition: all 0.2s ease-in-out;
         }
 
         .calendar-day.today .day-number {
@@ -181,6 +186,17 @@
 
         .calendar-day.selected {
             background: var(--calendar-day-selected-bg, #c084fc);
+        }
+        
+        .today-pop {
+            transform: scale(1.1);
+            animation: pop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1.1); }
         }
 
         .event-dot {
@@ -510,6 +526,71 @@
             top: 4px;
             right: 4px;
         }
+        
+        /* Modal for date selector */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--glass-bg-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(20px);
+            transition: transform 0.3s ease-in-out;
+            overflow: hidden;
+        }
+
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 0 0.5rem;
+        }
+
+        .modal-item {
+            padding: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            transition: background 0.2s;
+        }
+        
+        .modal-item:hover {
+            background: var(--glass-border-color);
+        }
+
+        .modal-item.active {
+            background: var(--calendar-day-today-bg);
+            color: var(--calendar-day-today-number-color);
+            font-weight: bold;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100 min-h-screen">
@@ -558,7 +639,7 @@
                     <h1 id="headerTitle" class="text-xl font-bold text-white">January 2025</h1>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button id="todayButton" class="px-3 py-1 bg-white/20 rounded-lg text-white text-sm hover:bg-white/20">
+                    <button id="currentDateButton" class="px-3 py-1 bg-white/20 rounded-lg text-white text-sm hover:bg-white/20">
                         Today
                     </button>
                     <select id="languageSelector" class="px-3 py-1 bg-white/20 rounded-lg text-white text-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500">
@@ -591,7 +672,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                             </svg>
                         </button>
-                        <h2 id="monthTitle" class="text-lg font-semibold">January 2025</h2>
+                        <h2 id="monthTitle" class="text-lg font-semibold cursor-pointer">January 2025</h2>
                         <button id="nextMonth" class="p-2 rounded-lg hover:bg-white/20">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -852,6 +933,27 @@
             </div>
         </div>
     </div>
+    
+    <div id="dateSelectorModal" class="modal">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="selectorTitle" class="text-lg font-semibold">Select Date</h3>
+                <button id="closeSelectorModal" class="p-2 rounded-lg hover:bg-white/20">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="flex items-center justify-center space-x-4 mb-4">
+                <select id="selectorType" class="bg-white/50 rounded-lg p-2">
+                    <option value="month">Month</option>
+                    <option value="year">Year</option>
+                </select>
+            </div>
+            <div id="selectorContainer" class="modal-list hide-scrollbar">
+                </div>
+        </div>
+    </div>
 
     <script>
         // Global variables
@@ -870,10 +972,10 @@
 
         // Add a list of fixed national holidays
         const nationalHolidays = [
-            { date: '2025-01-26', title: 'Republic Day', category: 'national_holiday' },
-            { date: '2025-08-15', title: 'Independence Day', category: 'national_holiday' },
-            { date: '2025-10-02', title: 'Mahatma Gandhi\'s Birthday', category: 'national_holiday' },
-            { date: '2025-12-25', title: 'Christmas', category: 'national_holiday' },
+            { date: '2025-01-26', title: 'Republic Day', category: 'national_holiday', id: 'nh-2025-01-26' },
+            { date: '2025-08-15', title: 'Independence Day', category: 'national_holiday', id: 'nh-2025-08-15' },
+            { date: '2025-10-02', title: 'Mahatma Gandhi\'s Birthday', category: 'national_holiday', id: 'nh-2025-10-02' },
+            { date: '2025-12-25', title: 'Christmas', category: 'national_holiday', id: 'nh-2025-12-25' },
         ];
         
         // Language translations
@@ -939,7 +1041,6 @@
                 feb: 'Feb',
                 mar: 'Mar',
                 apr: 'Apr',
-                may: 'May',
                 jun: 'Jun',
                 jul: 'Jul',
                 aug: 'Aug',
@@ -952,6 +1053,9 @@
                 fontSize: 'Size',
                 fontFamily: 'Font',
                 enableNotifications: 'Enable Notifications',
+                selectDate: 'Select Date',
+                selectMonth: 'Select Month',
+                selectYear: 'Select Year',
             },
             hi: { // Hindi
                 filters: 'फ़िल्टर',
@@ -1026,6 +1130,9 @@
                 fontSize: 'आकार',
                 fontFamily: 'फ़ॉन्ट',
                 enableNotifications: 'अधिसूचनाएँ सक्षम करें',
+                selectDate: 'तिथि चुनें',
+                selectMonth: 'महीना चुनें',
+                selectYear: 'वर्ष चुनें',
             },
             kh: { // Khasi
                 filters: 'Filters',
@@ -1101,6 +1208,9 @@
                 fontSize: 'fontSize',
                 fontFamily: 'fontFamily',
                 enableNotifications: 'enableNotifications',
+                selectDate: 'Select Date',
+                selectMonth: 'Select Month',
+                selectYear: 'Select Year',
             },
             kb: { // Karbi (approx.)
                 filters: 'Filters',
@@ -1176,6 +1286,9 @@
                 fontSize: 'Size',
                 fontFamily: 'Font',
                 enableNotifications: 'enableNotifications',
+                selectDate: 'Select Date',
+                selectMonth: 'Select Month',
+                selectYear: 'Select Year',
             }
         };
 
@@ -1263,6 +1376,12 @@
         
         // Notification functions
         function enableNotifications() {
+            // Check if AndroidInterface is available to call the native method
+            if (typeof AndroidInterface !== 'undefined' && AndroidInterface.enableNotifications) {
+                AndroidInterface.enableNotifications();
+                return;
+            }
+
             if (!("Notification" in window)) {
                 alert("This browser does not support desktop notification.");
                 return;
@@ -1371,7 +1490,12 @@
             fontFamily = font;
             saveSettings();
         }
-
+        
+        function updateCurrentDateButton() {
+            const today = new Date();
+            document.getElementById('currentDateButton').textContent = today.getDate();
+        }
+        
         // UI Update functions
         function updateLanguage() {
             document.getElementById('sidebarTitle').textContent = t('filters');
@@ -1379,7 +1503,7 @@
             document.getElementById('filterPersonal').textContent = t('personal');
             document.getElementById('filterHoliday').textContent = t('holidays');
             document.getElementById('filterNationalHoliday').textContent = t('nationalHolidays');
-            document.getElementById('todayButton').textContent = t('today');
+            document.getElementById('currentDateButton').textContent = new Date().getDate(); // New
             document.querySelector('[data-view="month"]').textContent = t('month');
             document.querySelector('[data-view="week"]').textContent = t('week');
             document.querySelector('[data-view="day"]').textContent = t('day');
@@ -1523,6 +1647,14 @@
             currentDate = new Date();
             selectedDate = null;
             renderCurrentView();
+            // Animate the "today" button
+            const todayElement = document.querySelector('.calendar-day.today');
+            if(todayElement) {
+                todayElement.classList.add('today-pop');
+                setTimeout(() => {
+                    todayElement.classList.remove('today-pop');
+                }, 300);
+            }
         }
 
         function selectDate(dateString) {
@@ -1564,7 +1696,7 @@
                         <div class="space-y-1">
                             ${dayEvents.map(event => `
                                 <div class="event-${event.category} text-white text-xs p-1 rounded cursor-pointer" 
-                                     onclick="editEvent('${event.id}')">
+                                     data-event-id="${event.id}">
                                     ${event.time ? formatTime(event.time) : ''} ${event.title}
                                 </div>
                             `).join('')}
@@ -1590,7 +1722,7 @@
                 daySchedule.innerHTML = `<div class="text-center text-gray-500 py-8">${t('noEvents')}</div>`;
             } else {
                 daySchedule.innerHTML = dayEvents.map(event => `
-                    <div class="glass rounded-lg p-4 cursor-pointer hover:bg-white/20" onclick="editEvent('${event.id}')">
+                    <div class="glass rounded-lg p-4 cursor-pointer hover:bg-white/20" data-event-id="${event.id}">
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
                                 <div class="flex items-center space-x-2 mb-1">
@@ -1631,7 +1763,7 @@
                 agendaEvents.innerHTML = upcomingEvents.map(event => {
                     const eventDate = new Date(event.date + 'T00:00:00');
                     return `
-                        <div class="glass rounded-lg p-4 cursor-pointer hover:bg-white/20" onclick="editEvent('${event.id}')">
+                        <div class="glass rounded-lg p-4 cursor-pointer hover:bg-white/20" data-event-id="${event.id}">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
                                     <div class="flex items-center space-x-2 mb-1">
@@ -1678,7 +1810,7 @@
                 eventsListContent.innerHTML = filteredEvents.map(event => {
                     const eventDate = new Date(event.date + 'T00:00:00');
                     return `
-                        <div class="glass rounded-lg p-4 cursor-pointer hover:bg-white/20" onclick="editEvent('${event.id}')">
+                        <div class="glass rounded-lg p-4 cursor-pointer hover:bg-white/20" data-event-id="${event.id}">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
                                     <div class="flex items-center space-x-2 mb-1">
@@ -1701,7 +1833,8 @@
             const deleteBtn = document.getElementById('deleteEventBtn');
             editingEventId = eventId;
             if (eventId) {
-                const event = events.find(e => e.id === eventId);
+                const allEvents = [...events, ...nationalHolidays];
+                const event = allEvents.find(e => e.id === eventId);
                 if (event) {
                     document.getElementById('modalTitle').textContent = t('editEvent');
                     document.getElementById('eventTitle').value = event.title;
@@ -1710,16 +1843,9 @@
                     document.getElementById('eventCategory').value = event.category;
                     document.getElementById('eventDescription').value = event.description || '';
                     deleteBtn.classList.remove('hidden');
-                } else {
-                    // It's a national holiday, so make the form read-only
-                    document.getElementById('modalTitle').textContent = 'National Holiday';
-                    const holiday = nationalHolidays.find(h => h.id === eventId);
-                    if (holiday) {
-                        document.getElementById('eventTitle').value = holiday.title;
-                        document.getElementById('eventDate').value = holiday.date;
-                        document.getElementById('eventCategory').value = 'national_holiday';
-                        document.getElementById('eventDescription').value = '';
-                        document.getElementById('eventTime').value = '';
+
+                    if (event.category === 'national_holiday') {
+                        document.getElementById('modalTitle').textContent = 'National Holiday';
                         document.getElementById('eventTitle').readOnly = true;
                         document.getElementById('eventDate').readOnly = true;
                         document.getElementById('eventTime').readOnly = true;
@@ -1727,6 +1853,14 @@
                         document.getElementById('eventDescription').readOnly = true;
                         document.getElementById('saveEventBtn').classList.add('hidden');
                         deleteBtn.classList.add('hidden');
+                    } else {
+                        document.getElementById('eventTitle').readOnly = false;
+                        document.getElementById('eventDate').readOnly = false;
+                        document.getElementById('eventTime').readOnly = false;
+                        document.getElementById('eventCategory').disabled = false;
+                        document.getElementById('eventDescription').readOnly = false;
+                        document.getElementById('saveEventBtn').classList.remove('hidden');
+                        deleteBtn.classList.remove('hidden');
                     }
                 }
             } else {
@@ -1743,6 +1877,8 @@
                 document.getElementById('saveEventBtn').classList.remove('hidden');
                 deleteBtn.classList.add('hidden');
             }
+            hideEventsListModal();
+            hideSettingsModal();
             modal.classList.remove('hidden');
         }
 
@@ -1751,13 +1887,18 @@
         function hideEventsListModal() { document.getElementById('eventsListModal').classList.add('hidden'); }
         function showSettingsModal() { document.getElementById('settingsModal').classList.remove('hidden'); }
         function hideSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); }
-        function editEvent(eventId) { 
-            const event = events.find(e => e.id === eventId);
-            const holiday = nationalHolidays.find(h => h.id === eventId);
-            if (event) {
-                showEventModal(null, eventId);
-            } else if (holiday) {
-                alert('This is a fixed national holiday and cannot be edited or deleted.');
+        
+        function handleEventClick(e) {
+            const eventElement = e.target.closest('[data-event-id]');
+            if (eventElement) {
+                const eventId = eventElement.dataset.eventId;
+                const event = events.find(e => e.id === eventId);
+                const holiday = nationalHolidays.find(h => h.id === eventId);
+                if (event) {
+                    showEventModal(null, eventId);
+                } else if (holiday) {
+                    showEventModal(null, eventId);
+                }
             }
         }
 
@@ -1770,14 +1911,39 @@
                 category: document.getElementById('eventCategory').value,
                 description: document.getElementById('eventDescription').value
             };
-            if (editingEventId) { updateEvent(editingEventId, formData); } else { addEvent(formData); }
+            if (editingEventId) { 
+                // Call Android method for updating event
+                if (typeof AndroidInterface !== 'undefined' && AndroidInterface.editEvent) {
+                    AndroidInterface.editEvent(editingEventId, formData.title, formData.description);
+                }
+                updateEvent(editingEventId, formData); 
+            } else { 
+                addEvent(formData); 
+            }
             hideEventModal();
         }
 
         function handleDeleteEvent() {
             if (editingEventId && confirm('Are you sure you want to delete this event?')) {
+                // Call Android method for deleting event
+                if (typeof AndroidInterface !== 'undefined' && AndroidInterface.deleteEvent) {
+                    AndroidInterface.deleteEvent(editingEventId);
+                }
                 deleteEvent(editingEventId);
                 hideEventModal();
+            }
+        }
+
+        function handleClearAllEvents() {
+            if (confirm('Are you sure you want to clear all events? This cannot be undone.')) {
+                // Call Android method for clearing all events
+                if (typeof AndroidInterface !== 'undefined' && AndroidInterface.clearAllEvents) {
+                    AndroidInterface.clearAllEvents();
+                }
+                events = [];
+                saveEvents();
+                renderCurrentView();
+                hideSettingsModal();
             }
         }
 
@@ -1805,7 +1971,19 @@
             renderCurrentView();
         }
 
-        function handleTodayClick() { currentDate = new Date(); selectedDate = null; renderCurrentView(); }
+        function handleTodayClick() { 
+            currentDate = new Date(); 
+            selectedDate = null; 
+            renderCurrentView(); 
+            // Animate the "today" button
+            const todayElement = document.querySelector('.calendar-day.today');
+            if(todayElement) {
+                todayElement.classList.add('today-pop');
+                setTimeout(() => {
+                    todayElement.classList.remove('today-pop');
+                }, 300);
+            }
+        }
         
         function handleLanguageChange(event) {
             currentLanguage = event.target.value;
@@ -1835,12 +2013,58 @@
             if (tab === 'events') showEventsListModal();
             else if (tab === 'settings') showSettingsModal();
         }
+        
+        function showDateSelectorModal(type) {
+            const modal = document.getElementById('dateSelectorModal');
+            const selectorType = document.getElementById('selectorType');
+            const selectorContainer = document.getElementById('selectorContainer');
+            const selectorTitle = document.getElementById('selectorTitle');
+            
+            selectorType.value = type;
+            selectorTitle.textContent = type === 'month' ? t('selectMonth') : t('selectYear');
 
+            renderDateSelectorList(type);
+
+            modal.classList.add('active');
+        }
+        
+        function hideDateSelectorModal() {
+            document.getElementById('dateSelectorModal').classList.remove('active');
+        }
+
+        function renderDateSelectorList(type) {
+            const container = document.getElementById('selectorContainer');
+            let content = '';
+
+            if (type === 'month') {
+                const monthNames = [t('january'), t('february'), t('march'), t('april'), t('may'), t('june'), t('july'), t('august'), t('september'), t('october'), t('november'), t('december')];
+                const currentMonth = currentDate.getMonth();
+                content = monthNames.map((month, index) => 
+                    `<div class="modal-item ${index === currentMonth ? 'active' : ''}" data-value="${index}">${month}</div>`
+                ).join('');
+            } else {
+                const currentYear = currentDate.getFullYear();
+                const startYear = currentYear - 10000;
+                const endYear = currentYear + 10000;
+                for (let year = startYear; year <= endYear; year++) {
+                    content += `<div class="modal-item ${year === currentYear ? 'active' : ''}" data-value="${year}">${year}</div>`;
+                }
+            }
+
+            container.innerHTML = content;
+            
+            // Scroll to active item
+            const activeItem = container.querySelector('.modal-item.active');
+            if (activeItem) {
+                activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        
         function initializeEventListeners() {
             document.getElementById('menuButton').addEventListener('click', handleSidebarToggle);
             document.getElementById('closeSidebar').addEventListener('click', handleSidebarToggle);
             document.getElementById('overlay').addEventListener('click', handleSidebarToggle);
-            document.getElementById('todayButton').addEventListener('click', handleTodayClick);
+            document.getElementById('currentDateButton').addEventListener('click', goToToday);
             document.getElementById('languageSelector').addEventListener('change', handleLanguageChange);
             document.querySelectorAll('.view-btn').forEach(btn => btn.addEventListener('click', () => handleViewChange(btn.dataset.view)));
             document.getElementById('prevMonth').addEventListener('click', () => handleNavigation(-1));
@@ -1866,12 +2090,7 @@
                 timeFormat = parseInt(e.target.value);
                 saveSettings(); renderCurrentView();
             });
-            document.getElementById('clearAllEvents').addEventListener('click', () => {
-                if (confirm('Are you sure you want to clear all events? This cannot be undone.')) {
-                    events = [];
-                    saveEvents(); renderCurrentView(); hideSettingsModal();
-                }
-            });
+            document.getElementById('clearAllEvents').addEventListener('click', handleClearAllEvents);
             document.querySelectorAll('.filter-item').forEach(item => item.addEventListener('click', () => handleFilterToggle(item.dataset.filter)));
             document.getElementById('eventModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) hideEventModal(); });
             document.getElementById('eventsListModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) hideEventsListModal(); });
@@ -1890,6 +2109,34 @@
             
             // New event listener for notifications
             document.getElementById('enableNotificationsBtn').addEventListener('click', enableNotifications);
+
+            // Updated event listeners for event clicks
+            document.getElementById('weekGrid').addEventListener('click', handleEventClick);
+            document.getElementById('daySchedule').addEventListener('click', handleEventClick);
+            document.getElementById('agendaEvents').addEventListener('click', handleEventClick);
+            document.getElementById('eventsListContent').addEventListener('click', handleEventClick);
+            
+            // New event listeners for date selector modal
+            document.getElementById('monthTitle').addEventListener('click', () => showDateSelectorModal('month'));
+            document.getElementById('monthTitle').addEventListener('dblclick', () => showDateSelectorModal('year'));
+            document.getElementById('closeSelectorModal').addEventListener('click', hideDateSelectorModal);
+            document.getElementById('selectorType').addEventListener('change', (e) => renderDateSelectorList(e.target.value));
+            document.getElementById('selectorContainer').addEventListener('click', (e) => {
+                const selectedItem = e.target.closest('.modal-item');
+                if (!selectedItem) return;
+
+                const type = document.getElementById('selectorType').value;
+                const value = parseInt(selectedItem.dataset.value);
+
+                if (type === 'month') {
+                    currentDate.setMonth(value);
+                } else {
+                    currentDate.setFullYear(value);
+                }
+                
+                hideDateSelectorModal();
+                renderCurrentView();
+            });
         }
 
         function initializeTouchSupport() {
@@ -1948,6 +2195,7 @@
             initializeEventListeners();
             initializeTouchSupport();
             renderCurrentView();
+            updateCurrentDateButton(); // New call
             
             // Restore filter UI state based on saved settings
             document.querySelectorAll('.filter-item').forEach(item => {
