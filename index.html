@@ -208,7 +208,16 @@
 
         .filter-item.active {
             background: var(--filter-item-active-bg, #e5e7eb);
-        }
+        } 
+        #languageSelector {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: none !important;
+
+    text-align: center;          /* Center text */
+    text-align-last: center;     /* Ensures the selected option is centered */
+}
 
         /* Force grid layout - override any conflicting styles */
         #weekdayHeaders.calendar-grid,
@@ -954,7 +963,7 @@
                 </div>
         </div>
     </div>
-
+    
     <script>
         // Global variables
         let currentDate = new Date();
@@ -1165,7 +1174,7 @@
                 clearAllEvents: 'Clear All Events',
                 upcomingEvents: 'Upcoming Events',
                 noEvents: 'No events scheduled',
-                sunday: 'Sngi u Blei',
+                sunday: 'Sngi Blei',
                 monday: 'Sngi nyngkong',
                 tuesday: 'Sngi Ba-ar',
                 wednesday: 'Sngi Balang',
@@ -1292,7 +1301,7 @@
             }
         };
 
-        // Utility functions
+     // Utility functions
         function t(key) {
             return translations[currentLanguage][key] || key;
         }
@@ -1373,6 +1382,8 @@
             const day = date.getDate().toString().padStart(2, '0');
             return `${year}-${month}-${day}`;
         }
+        
+        
         
         // Notification functions
         function enableNotifications() {
@@ -1902,6 +1913,8 @@
             }
         }
 
+
+
         function handleEventFormSubmit(e) {
             e.preventDefault();
             const formData = {
@@ -2032,34 +2045,41 @@
             document.getElementById('dateSelectorModal').classList.remove('active');
         }
 
+        // Corrected renderDateSelectorList
         function renderDateSelectorList(type) {
-            const container = document.getElementById('selectorContainer');
-            let content = '';
+          const container = document.getElementById('selectorContainer');
+          let content = '';
+          const currentYear = currentDate.getFullYear();
+          const currentMonth = currentDate.getMonth();
 
-            if (type === 'month') {
-                const monthNames = [t('january'), t('february'), t('march'), t('april'), t('may'), t('june'), t('july'), t('august'), t('september'), t('october'), t('november'), t('december')];
-                const currentMonth = currentDate.getMonth();
-                content = monthNames.map((month, index) => 
-                    `<div class="modal-item ${index === currentMonth ? 'active' : ''}" data-value="${index}">${month}</div>`
-                ).join('');
-            } else {
-                const currentYear = currentDate.getFullYear();
-                const startYear = currentYear - 10000;
-                const endYear = currentYear + 10000;
-                for (let year = startYear; year <= endYear; year++) {
-                    content += `<div class="modal-item ${year === currentYear ? 'active' : ''}" data-value="${year}">${year}</div>`;
-                }
-            }
+          container.innerHTML = ''; // Clear previous content
 
-            container.innerHTML = content;
-            
-            // Scroll to active item
-            const activeItem = container.querySelector('.modal-item.active');
-            if (activeItem) {
-                activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (type === 'month') {
+            const monthNames = [t('january'), t('february'), t('march'), t('april'), t('may'), t('june'), t('july'), t('august'), t('september'), t('october'), t('november'), t('december')];
+            content = monthNames.map((month, index) => 
+              `<div class="modal-item ${index === currentMonth ? 'active' : ''}" data-value="${index}">${month}</div>`
+            ).join('');
+          } else { // type === 'year'
+            const startYear = currentYear - 10000;
+            const endYear = currentYear + 10000;
+            for (let year = startYear; year <= endYear; year++) {
+              content += `<div class="modal-item ${year === currentYear ? 'active' : ''}" data-value="${year}">${year}</div>`;
             }
+          }
+
+          container.innerHTML = content;
+
+          // Scroll to active item
+          const activeItem = container.querySelector('.modal-item.active');
+          if (activeItem) {
+            activeItem.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            });
+          }
         }
-        
+
+        // Corrected initializeEventListeners
         function initializeEventListeners() {
             document.getElementById('menuButton').addEventListener('click', handleSidebarToggle);
             document.getElementById('closeSidebar').addEventListener('click', handleSidebarToggle);
@@ -2121,6 +2141,8 @@
             document.getElementById('monthTitle').addEventListener('dblclick', () => showDateSelectorModal('year'));
             document.getElementById('closeSelectorModal').addEventListener('click', hideDateSelectorModal);
             document.getElementById('selectorType').addEventListener('change', (e) => renderDateSelectorList(e.target.value));
+            
+            // Consolidated and corrected logic for month and year selection
             document.getElementById('selectorContainer').addEventListener('click', (e) => {
                 const selectedItem = e.target.closest('.modal-item');
                 if (!selectedItem) return;
@@ -2129,13 +2151,17 @@
                 const value = parseInt(selectedItem.dataset.value);
 
                 if (type === 'month') {
+                    // Month was selected, update the date and show the year selector
                     currentDate.setMonth(value);
+                    document.getElementById('selectorType').value = 'year';
+                    document.getElementById('selectorTitle').textContent = t('selectYear');
+                    renderDateSelectorList('year');
                 } else {
+                    // Year was selected, update the date, close the modal, and re-render
                     currentDate.setFullYear(value);
+                    hideDateSelectorModal();
+                    renderCurrentView();
                 }
-                
-                hideDateSelectorModal();
-                renderCurrentView();
             });
         }
 
@@ -2210,6 +2236,7 @@
         } 
 
         document.addEventListener('DOMContentLoaded', initialize);
+
     </script>
     
     <script>
@@ -2225,6 +2252,7 @@
                 });
         });
     }
+    
 </script>
 </body>
 </html>
