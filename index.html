@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Multilingual Calendar</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
+      <style>
         /* Prevent zoom and text selection */
         * {
             -webkit-user-select: none;
@@ -1690,11 +1690,18 @@ function scheduleAllNotifications(showToastFlag = false) {
         orderedWeekdays.push(allWeekdays[(weekStartsOn + i) % 7]);
     }
 
-    weekdayHeaders.innerHTML = orderedWeekdays.map(day => {
+    weekdayHeaders.innerHTML = orderedWeekdays.map((day, index) => {
+        let styleColor = '';
+        if ((weekStartsOn + index) % 7 === 0) {
+            styleColor = 'color: red;'; // Sunday
+        } else if ((weekStartsOn + index) % 7 === 6) {
+            styleColor = 'color: mediumseagreen;'; // Saturday
+        }
+
         return `
-          <div class="weekday-header">
+          <div class="weekday-header" style="${styleColor}">
             <div>${day.name}</div>
-            <div style="font-size: 12px; color: gray">${day.eng}</div>
+            <div style="font-size: 12px; ${styleColor}">${day.eng}</div>
           </div>
         `;
     }).join('');
@@ -1725,7 +1732,16 @@ function scheduleAllNotifications(showToastFlag = false) {
         if (!isCurrentMonth) classList += ' other-month';
         if (isTodayFlag) classList += ' today';
         if (isSelectedFlag) classList += ' selected';
-        
+
+        // ✅ Sunday red / Saturday mint for day numbers
+        const dayOfWeek = currentLoopDate.getDay();
+        let styleColor = '';
+        if (dayOfWeek === 0) { // Sunday
+            styleColor = 'color: red;';
+        } else if (dayOfWeek === 6) { // Saturday
+            styleColor = 'color: mediumseagreen;';
+        }
+
         const visibleEvents = dayEvents.slice(0, 3);
         const eventDotsHTML = visibleEvents.map(event => {
             const category = event.category || 'default';
@@ -1740,7 +1756,7 @@ function scheduleAllNotifications(showToastFlag = false) {
 
         dayElements += `
             <div class="${classList}" data-date="${dateString}" onclick="showDayViewForDate('${dateString}')">
-                <span class="day-number">${currentLoopDate.getDate()}</span>
+                <span class="day-number" style="${styleColor}">${currentLoopDate.getDate()}</span>
                 <div class="event-dots flex flex-wrap">
                     ${eventDotsHTML}
                     ${moreEventsDotHTML}
