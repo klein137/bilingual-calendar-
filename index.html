@@ -1,13 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>Multilingual Calendar</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-      <style>
+<style>
         /* Prevent zoom and text selection */
         * {
             -webkit-user-select: none;
@@ -659,6 +650,7 @@
             font-weight: bold;
         }
         
+        
         /* FIX: CSS for the events list modal */
         #eventsListModal {
             position: fixed;
@@ -1127,39 +1119,43 @@ const translations = {
         noEvents: 'No events scheduled',
 
         // Days full + short
-        sunday: { name: 'Sunday', eng: '' },
-        monday: { name: 'Monday', eng: '' },
-        tuesday: { name: 'Tuesday', eng: '' },
-        wednesday: { name: 'Wednesday', eng: '' },
-        thursday: { name: 'Thursday', eng: '' },
-        friday: { name: 'Friday', eng: '' },
-        saturday: { name: 'Saturday', eng: '' },
+        sunday: { name: 'Sunday', eng: '(Sunday)' },
+        monday: { name: 'Monday', eng: '(Monday)' },
+        tuesday: { name: 'Tuesday', eng: '(Tuesday)' },
+        wednesday: { name: 'Wednesday', eng: '(Wednesday)' },
+        thursday: { name: 'Thursday', eng: '(Thursday)' },
+        friday: { name: 'Friday', eng: '(Friday)' },
+        saturday: { name: 'Saturday', eng: '(Saturday)' },
 
-        sun: { name: 'Sun', eng: '' },
-        mon: { name: 'Mon', eng: '' },
-        tue: { name: 'Tue', eng: '' },
-        wed: { name: 'Wed', eng: '' },
-        thu: { name: 'Thu', eng: '' },
-        fri: { name: 'Fri', eng: '' },
-        sat: { name: 'Sat', eng: '' },
+        sun: { name: 'Sun', eng: '(Sun)' },
+        mon: { name: 'Mon', eng: '(Mon)' },
+        tue: { name: 'Tue', eng: '(Tue)' },
+        wed: { name: 'Wed', eng: '(Wed)' },
+        thu: { name: 'Thu', eng: '(Thu)' },
+        fri: { name: 'Fri', eng: '(Fri)' },
+        sat: { name: 'Sat', eng: '(Sat)' },
 
         // Months
-        january: 'January',
-        february: 'February',
-        march: 'March',
-        april: 'April',
-        may: 'May',
-        june: 'June',
-        july: 'July',
-        august: 'August',
-        september: 'September',
-        october: 'October',
-        november: 'November',
-        december: 'December',
+        january: { name: 'January', eng: '(January)' },
+        february: { name: 'February', eng: '(February)' },
+        march: { name: 'March', eng: '(March)' },
+        april: { name: 'April', eng: '(April)' },
+        may: { name: 'May', eng: '(May)' },
+        june: { name: 'June', eng: '(June)' },
+        july: { name: 'July', eng: '(July)' },
+        august: { name: 'August', eng: '(August)' },
+        september: { name: 'September', eng: '(September)' },
+        october: { name: 'October', eng: '(October)' },
+        november: { name: 'November', eng: '(November)' },
+        december: { name: 'December', eng: '(December)' },
 
-        jan: 'Jan', feb: 'Feb', mar: 'Mar', apr: 'Apr', may: 'May',
-        jun: 'Jun', jul: 'Jul', aug: 'Aug', sep: 'Sep', oct: 'Oct',
-        nov: 'Nov', dec: 'Dec',
+        jan: { name: 'Jan', eng: '(Jan)' }, feb: { name: 'Feb', eng: '(Feb)' },
+        mar: { name: 'Mar', eng: '(Mar)' }, apr: { name: 'Apr', eng: '(Apr)' },
+        mayShort: { name: 'May', eng: '(May)' }, // to avoid conflict with "may"
+        jun: { name: 'Jun', eng: '(Jun)' }, jul: { name: 'Jul', eng: '(Jul)' },
+        aug: { name: 'Aug', eng: '(Aug)' }, sep: { name: 'Sep', eng: '(Sep)' },
+        oct: { name: 'Oct', eng: '(Oct)' }, nov: { name: 'Nov', eng: '(Nov)' },
+        dec: { name: 'Dec', eng: '(Dec)' },
 
         searchEvents: 'Search events...',
         theme: 'Theme',
@@ -1221,12 +1217,25 @@ const translations = {
         sat: { name: 'शनि', eng: '(Sat)' },
 
         // Months
-        january: 'जनवरी', february: 'फरवरी', march: 'मार्च', april: 'अप्रैल',
-        may: 'मई', june: 'जून', july: 'जुलाई', august: 'अगस्त',
-        september: 'सितंबर', october: 'अक्टूबर', november: 'नवंबर', december: 'दिसंबर',
+        january: { name: 'जनवरी', eng: '(January)' },
+        february: { name: 'फरवरी', eng: '(February)' },
+        march: { name: 'मार्च', eng: '(March)' },
+        april: { name: 'अप्रैल', eng: '(April)' },
+        may: { name: 'मई', eng: '(May)' },
+        june: { name: 'जून', eng: '(June)' },
+        july: { name: 'जुलाई', eng: '(July)' },
+        august: { name: 'अगस्त', eng: '(August)' },
+        september: { name: 'सितंबर', eng: '(September)' },
+        october: { name: 'अक्टूबर', eng: '(October)' },
+        november: { name: 'नवंबर', eng: '(November)' },
+        december: { name: 'दिसंबर', eng: '(December)' },
 
-        jan: 'जन', feb: 'फर', mar: 'मार्च', apr: 'अप्रै', jun: 'जून',
-        jul: 'जुला', aug: 'अग', sep: 'सितं', oct: 'अक्टू', nov: 'नव', dec: 'दिस',
+        jan: { name: 'जन', eng: '(Jan)' }, feb: { name: 'फर', eng: '(Feb)' },
+        mar: { name: 'मार्च', eng: '(Mar)' }, apr: { name: 'अप्रै', eng: '(Apr)' },
+        mayShort: { name: 'मई', eng: '(May)' }, jun: { name: 'जून', eng: '(Jun)' },
+        jul: { name: 'जुला', eng: '(Jul)' }, aug: { name: 'अग', eng: '(Aug)' },
+        sep: { name: 'सितं', eng: '(Sep)' }, oct: { name: 'अक्टू', eng: '(Oct)' },
+        nov: { name: 'नव', eng: '(Nov)' }, dec: { name: 'दिस', eng: '(Dec)' },
 
         searchEvents: 'कार्यक्रम खोजें...',
         theme: 'थीम',
@@ -1288,13 +1297,25 @@ const translations = {
         sat: { name: 'Sait', eng: '(Sat)' },
 
         // Months
-        january: 'Kyllalyngkot', february: 'Rymphang', march: 'Lber', april: 'Iaiong',
-        may: 'Jymmang', june: 'Jylliew', july: 'Naitung', august: 'Nailar',
-        september: 'Nailur', october: 'Risaw', november: 'Naiwieng', december: 'Nohprah',
+        january: { name: 'Kyllalyngkot', eng: '(January)' },
+        february: { name: 'Rymphang', eng: '(February)' },
+        march: { name: 'Lber', eng: '(March)' },
+        april: { name: 'Iaiong', eng: '(April)' },
+        may: { name: 'Jymmang', eng: '(May)' },
+        june: { name: 'Jylliew', eng: '(June)' },
+        july: { name: 'Naitung', eng: '(July)' },
+        august: { name: 'Nailar', eng: '(August)' },
+        september: { name: 'Nailur', eng: '(September)' },
+        october: { name: 'Risaw', eng: '(October)' },
+        november: { name: 'Naiwieng', eng: '(November)' },
+        december: { name: 'Nohprah', eng: '(December)' },
 
-        jan: 'Kyl', feb: 'Rym', mar: 'Lbe', apr: 'Iao', may: 'Jym',
-        jun: 'Jyl', jul: 'Nai', aug: 'Nai', sep: 'Nai', oct: 'Ris',
-        nov: 'Nai', dec: 'Noh',
+        jan: { name: 'Kyl', eng: '(Jan)' }, feb: { name: 'Rym', eng: '(Feb)' },
+        mar: { name: 'Lbe', eng: '(Mar)' }, apr: { name: 'Iao', eng: '(Apr)' },
+        mayShort: { name: 'Jym', eng: '(May)' }, jun: { name: 'Jyl', eng: '(Jun)' },
+        jul: { name: 'Nai', eng: '(Jul)' }, aug: { name: 'Nai', eng: '(Aug)' },
+        sep: { name: 'Nai', eng: '(Sep)' }, oct: { name: 'Ris', eng: '(Oct)' },
+        nov: { name: 'Nai', eng: '(Nov)' }, dec: { name: 'Noh', eng: '(Dec)' },
 
         searchEvents: 'searchEvents...',
         theme: 'theme',
@@ -1356,13 +1377,25 @@ const translations = {
         sat: { name: 'Bhomti', eng: '(Sat)' },
 
         // Months
-        january: 'Klangcheng', february: 'Kardi', march: 'Thangthang', april: 'Nengsam',
-        may: 'Nonghrek', june: 'Thebong', july: 'Kangjin', august: 'Langchan',
-        september: 'Nirong', october: 'Mirklan', november: 'Mirim', december: 'Nengkan',
+        january: { name: 'Klangcheng', eng: '(January)' },
+        february: { name: 'Kardi', eng: '(February)' },
+        march: { name: 'Thangthang', eng: '(March)' },
+        april: { name: 'Nengsam', eng: '(April)' },
+        may: { name: 'Nonghrek', eng: '(May)' },
+        june: { name: 'Thebong', eng: '(June)' },
+        july: { name: 'Kangjin', eng: '(July)' },
+        august: { name: 'Langchan', eng: '(August)' },
+        september: { name: 'Nirong', eng: '(September)' },
+        october: { name: 'Mirklan', eng: '(October)' },
+        november: { name: 'Mirim', eng: '(November)' },
+        december: { name: 'Nengkan', eng: '(December)' },
 
-        jan: 'Jan', feb: 'Feb', mar: 'Mar', apr: 'Apr', may: 'Nonghrek',
-        jun: 'Jun', jul: 'Jul', aug: 'Aug', sep: 'Sep', oct: 'Oct',
-        nov: 'Nov', dec: 'Dec',
+        jan: { name: 'Jan', eng: '(Jan)' }, feb: { name: 'Feb', eng: '(Feb)' },
+        mar: { name: 'Mar', eng: '(Mar)' }, apr: { name: 'Apr', eng: '(Apr)' },
+        mayShort: { name: 'Nonghrek', eng: '(May)' }, jun: { name: 'Jun', eng: '(Jun)' },
+        jul: { name: 'Jul', eng: '(Jul)' }, aug: { name: 'Aug', eng: '(Aug)' },
+        sep: { name: 'Sep', eng: '(Sep)' }, oct: { name: 'Oct', eng: '(Oct)' },
+        nov: { name: 'Nov', eng: '(Nov)' }, dec: { name: 'Dec', eng: '(Dec)' },
 
         searchEvents: 'searchEvents...',
         theme: 'Theme',
@@ -1666,17 +1699,28 @@ function scheduleAllNotifications(showToastFlag = false) {
         return;
     }
 
-    const monthNames = [
+    // ----------------------------
+    // Month names with English line
+    // ----------------------------
+    const monthObjects = [
         t('january'), t('february'), t('march'), t('april'),
         t('may'), t('june'), t('july'), t('august'),
         t('september'), t('october'), t('november'), t('december')
     ];
-    const monthName = monthNames[currentDate.getMonth()];
+
+    const monthObj = monthObjects[currentDate.getMonth()];
     const year = currentDate.getFullYear();
-    const title = `${monthName} ${year}`;
-    
-    monthTitle.textContent = title;
-    headerTitle.textContent = title;
+
+    // ✅ Middle calendar title (two lines)
+    monthTitle.innerHTML = `
+    <div style="text-align: center;">
+        <div>${monthObj.name} ${year}</div>
+        <div style="font-size: 14px; color: gray;">${monthObj.eng}</div>
+    </div>
+`;
+
+    // ✅ Top header (single line only)
+    headerTitle.textContent = `${monthObj.name} ${year}`;
 
     // ----------------------------
     // Weekday headers (with eng)
@@ -2217,27 +2261,38 @@ function handleClearAllEvents() {
 
         // Corrected renderDateSelectorList
         function renderDateSelectorList(type) {
-          const container = document.getElementById('selectorContainer');
-          let content = '';
-          const currentYear = currentDate.getFullYear();
-          const currentMonth = currentDate.getMonth();
+    const container = document.getElementById('selectorContainer');
+    let content = '';
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
 
-          container.innerHTML = ''; // Clear previous content
+    container.innerHTML = ''; // Clear previous content
 
-          if (type === 'month') {
-            const monthNames = [t('january'), t('february'), t('march'), t('april'), t('may'), t('june'), t('july'), t('august'), t('september'), t('october'), t('november'), t('december')];
-            content = monthNames.map((month, index) => 
-              `<div class="modal-item ${index === currentMonth ? 'active' : ''}" data-value="${index}">${month}</div>`
-            ).join('');
-          } else { // type === 'year'
-            const startYear = currentYear - 100;
-            const endYear = currentYear + 100;
-            for (let year = startYear; year <= endYear; year++) {
-              content += `<div class="modal-item ${year === currentYear ? 'active' : ''}" data-value="${year}">${year}</div>`;
-            }
-          }
+    if (type === 'month') {
+        const monthObjects = [
+            t('january'), t('february'), t('march'), t('april'),
+            t('may'), t('june'), t('july'), t('august'),
+            t('september'), t('october'), t('november'), t('december')
+        ];
 
-          container.innerHTML = content;
+        content = monthObjects.map((monthObj, index) => {
+            const monthName = typeof monthObj === "object" ? monthObj.name : monthObj;
+            const monthEng = typeof monthObj === "object" ? monthObj.eng : monthName;
+            return `
+                <div class="modal-item ${index === currentMonth ? 'active' : ''}" data-value="${index}">
+                    ${monthName} ${monthEng}
+                </div>
+            `;
+        }).join('');
+    } else { // type === 'year'
+        const startYear = currentYear - 100;
+        const endYear = currentYear + 100;
+        for (let year = startYear; year <= endYear; year++) {
+            content += `<div class="modal-item ${year === currentYear ? 'active' : ''}" data-value="${year}">${year}</div>`;
+        }
+    }
+
+    container.innerHTML = content;
 
           // Scroll to active item
           const activeItem = container.querySelector('.modal-item.active');
